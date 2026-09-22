@@ -1,0 +1,11 @@
+{
+  "name": "Games Practice",
+  "short_name": "Games",
+  "description": "Endless practice rounds of daily puzzle games with hints, timers, streaks and stats.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f2ee",
+  "theme_color": "#0a66c2",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
