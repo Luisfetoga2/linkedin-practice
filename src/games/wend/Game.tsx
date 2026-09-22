@@ -3,7 +3,8 @@ import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Check, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
-import { generatePuzzle, isValidWord, nextHint, type FoundWord } from './generator';
+import { generatePuzzle, isValidWord, type FoundWord } from './generator';
+import { planHint } from './hints';
 import {
   adjacent,
   assignWords,
@@ -272,33 +273,32 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const giveHint = () => {
     if (won) return;
     if (strokeRef.current) endStroke();
-    const found = foundWords(linesRef.current);
-    const r = nextHint(puzzle, found, revealed);
+    const r = planHint(puzzle, linesRef.current, revealed);
     if (r.kind === 'blocking') {
-      const f = found[r.found];
-      if (!f) return;
       setHint({
-        text: `${words[f.w].word} is a hidden word, but not there — it's blocking the rest. Draw through it to break it up.`,
-        blocking: f.path,
+        text: `${words[r.found.w].word} is a hidden word, but not there — it's blocking the rest. Draw through it to break it up.`,
+        blocking: r.found.path,
       });
       onHint();
       return;
     }
     if (r.kind === 'reveal') {
       const hw = words[r.w];
-      const next = revealed.slice();
-      next[r.w] = r.step + 1;
-      setRevealed(next);
-      setHint({
-        text:
-          r.step === 0
-            ? `The ${hw.word.length}-letter word starts on tile 1.`
-            : r.step + 1 === hw.word.length
-              ? `That's the whole ${hw.word.length}-letter word — trace tiles 1 to ${hw.word.length}.`
-              : `Here's letter ${r.step + 1} of the ${hw.word.length}-letter word.`,
-        blocking: [],
-      });
+      const len = hw.word.length;
+      setRevealed(r.revealed);
+      // Lay the revealed tiles down as a line (one undo step when the board changed).
+      commit(r.lines);
+      selectedRef.current = r.lines[r.lines.length - 1].at(-1) ?? null;
       onHint();
+      if (foundWords(r.lines).length === words.length) return;
+      const main =
+        r.step + 1 === len
+          ? `That's the whole ${len}-letter word.`
+          : r.step === 0
+            ? `The ${len}-letter word starts on tile 1.`
+            : `Here's letter ${r.step + 1} of the ${len}-letter word.`;
+      const note = r.flipped ? ' Your line ran backwards, so it was flipped.' : r.cleared ? ' Wrong tiles were taken out of your lines.' : '';
+      setHint({ text: main + note, blocking: [] });
       return;
     }
     setHint({ text: 'Trace the numbered tiles in order to spell the word.', blocking: [] });
@@ -409,6 +409,25 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
   const center = (c: number) => `${(c % size) + 0.5} ${Math.floor(c / size) + 0.5}`;
   const pathD = (p: number[]) => `M ${center(p[0])} ` + (p.length === 1 ? 'l 0 0' : p.slice(1).map((c) => `L ${center(c)}`).join(' '));
+  /** One small ">" per segment, at its midpoint, pointing in reading direction. */
+  const chevronsD = (p: number[]) => {
+    const H = 0.06; // half depth along the segment
+    const W = 0.12; // half width across it (~24% of a tile overall)
+    const f = (v: number) => +v.toFixed(3);
+    let d = '';
+    for (let i = 1; i < p.length; i++) {
+      const [a, b] = [p[i - 1], p[i]];
+      const ax = (a % size) + 0.5;
+      const ay = Math.floor(a / size) + 0.5;
+      const dx = (b % size) - (a % size);
+      const dy = Math.floor(b / size) - Math.floor(a / size);
+      const mx = ax + dx / 2;
+      const my = ay + dy / 2;
+      // Back corners, tip, back corners: perpendicular is (-dy, dx).
+      d += `M ${f(mx - dx * H - dy * W)} ${f(my - dy * H + dx * W)} L ${f(mx + dx * H)} ${f(my + dy * H)} L ${f(mx - dx * H + dy * W)} ${f(my - dy * H - dx * W)} `;
+    }
+    return d.trim();
+  };
 
   const blockingSet = new Set(hint?.blocking ?? []);
   // Revealed hint tiles: cell -> { w, k }
@@ -450,6 +469,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const w = assign[i];
     if (w >= 0) return `${styles.line} ${colorOf(w)}`;
     return `${styles.line} ${i === activeIdx ? styles.traceLine : styles.pendingLine}`;
+  };
+  const chevronClass = (i: number) => {
+    const w = assign[i];
+    if (w >= 0) return `${styles.chevron} ${colorOf(w)}`;
+    return `${styles.chevron} ${i === activeIdx ? styles.traceChevron : ''}`;
   };
   // Neutral lines underneath, found words above, the stroke on top.
   const drawOrder = shown.map((_, i) => i).sort((a, b) => {
@@ -497,7 +521,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
           <svg className={styles.lines} viewBox={`0 0 ${size} ${size}`} aria-hidden>
             {drawOrder.map((i) => (
-              <path key={`${i}-${shown[i][0]}`} d={pathD(shown[i])} className={lineClass(i)} />
+              <g key={`${i}-${shown[i][0]}`}>
+                <path d={pathD(shown[i])} className={lineClass(i)} />
+                {shown[i].length > 1 && <path d={chevronsD(shown[i])} className={chevronClass(i)} />}
+              </g>
             ))}
           </svg>
 

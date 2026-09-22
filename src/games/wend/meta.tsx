@@ -50,7 +50,7 @@ export const meta: GameMeta = {
         <li>Every letter is used by exactly one word, so a real word in the wrong place can block the rest.</li>
         <li>The slots below the grid show how long each hidden word is.</li>
         <li>You can also tap tile by tile. On a keyboard, type letters (or Space and the arrows), then Enter.</li>
-        <li>Stuck? Undo reverts your last move, and Hint reveals the next letter of a word you're looking for.</li>
+        <li>Stuck? Undo reverts your last move, and Hint reveals the next letter of a word you're looking for and fixes your lines to match. The little arrows on a line show which way it reads.</li>
       </ul>
     </>
   ),
