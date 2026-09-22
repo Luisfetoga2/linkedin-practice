@@ -36,7 +36,9 @@ export const meta: GameMeta = {
         <li>Each patch must contain exactly one clue.</li>
         <li>A number tells you how many cells the patch covers.</li>
         <li>A shape tells you whether the patch is a square, wide (wider than tall) or tall (taller than wide). A dashed shape can be any rectangle.</li>
-        <li>Drag across cells to draw a patch; tap a patch to remove it.</li>
+        <li>Drag across cells to draw a patch — every cell you pass through becomes part of it. Patches are never a single cell.</li>
+        <li>Draw an empty rectangle that overlaps a patch to grow it, as long as it still holds one clue.</li>
+        <li>Tap (or right-click) a patch to remove it. Release off the board or press Esc to cancel a drag.</li>
       </ul>
     </>
   ),

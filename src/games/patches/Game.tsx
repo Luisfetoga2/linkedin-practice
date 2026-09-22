@@ -95,6 +95,32 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     return r * n + c;
   };
 
+  /** More than half a cell outside the board. */
+  const releasedOffBoard = (x: number, y: number): boolean => {
+    const el = boardRef.current;
+    if (!el) return false;
+    const b = el.getBoundingClientRect();
+    const m = b.width / n / 2;
+    return x < b.left - m || x > b.right + m || y < b.top - m || y > b.bottom + m;
+  };
+
+  // Escape cancels a drag; Cmd/Ctrl+Z undoes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('.lp-modal-backdrop')) return;
+      if (e.key === 'Escape' && drag.current) {
+        cancelDrag();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // The preview shows what releasing would produce (including extend/merge results).
   const updatePreview = (box: Rect, start: number) => {
     const out = resolveDraw(patchesRef.current, clues, box, start, n);
@@ -102,8 +128,34 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     else setPreview({ rect: box, clue: -1, bad: out.kind === 'multi' });
   };
 
+  const cancelDrag = () => {
+    drag.current = null;
+    setPreview(null);
+  };
+
+  const removeAt = (cell: number) => {
+    const r = Math.floor(cell / n);
+    const c = cell % n;
+    const at = patchesRef.current.findIndex((p) => p && rectContains(p, r, c));
+    if (at < 0) return;
+    const next = patchesRef.current.slice();
+    next[at] = null;
+    commit(next);
+  };
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (locked || drag.current) return;
+    if (locked) return;
+    if (e.pointerType === 'mouse' && e.button === 2) {
+      // Right-click: cancel the drag in progress, or remove the patch under the cursor.
+      e.preventDefault();
+      if (drag.current) cancelDrag();
+      else {
+        const cell = cellFromPoint(e.clientX, e.clientY, false);
+        if (cell >= 0) removeAt(cell);
+      }
+      return;
+    }
+    if (drag.current) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const cell = cellFromPoint(e.clientX, e.clientY, false);
     if (cell < 0) return;
@@ -146,16 +198,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const rect = d.box;
     if (rect.r0 === rect.r1 && rect.c0 === rect.c1) {
       // Tap: remove the patch under the finger (there are no 1-cell patches).
-      const r = Math.floor(d.start / n);
-      const c = d.start % n;
-      const at = patchesRef.current.findIndex((p) => p && rectContains(p, r, c));
-      if (at >= 0) {
-        const next = patchesRef.current.slice();
-        next[at] = null;
-        commit(next);
-      }
+      removeAt(d.start);
       return;
     }
+    if (releasedOffBoard(e.clientX, e.clientY)) return; // drag off the board to cancel
     const out = resolveDraw(patchesRef.current, clues, rect, d.start, n);
     if (out.kind !== 'place') {
       setShake(rect);
@@ -196,6 +242,8 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setPatches(history[history.length - 1]);
     setHistory((h) => h.slice(0, -1));
   };
+  const undoRef = useRef(undo);
+  undoRef.current = undo;
 
   const clear = () => {
     if (locked || patchesRef.current.every((p) => !p)) return;
@@ -243,6 +291,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
         role="application"
         aria-label={`Patches board, ${n} by ${n}. ${patches.filter(Boolean).length} of ${clues.length} patches placed.`}
       >
@@ -271,7 +320,14 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             <div
               className={`${styles.preview}${preview.bad ? ` ${styles.previewBad}` : ''}`}
               style={{ ...rectStyle(preview.rect, n), ...(preview.clue >= 0 ? tint(clues[preview.clue].color) : {}) }}
-            />
+            >
+              {(preview.rect.r1 > preview.rect.r0 || preview.rect.c1 > preview.rect.c0) && (
+                <span className={styles.previewSize}>
+                  {preview.rect.c1 - preview.rect.c0 + 1}×{preview.rect.r1 - preview.rect.r0 + 1}
+                  <small> · {(preview.rect.c1 - preview.rect.c0 + 1) * (preview.rect.r1 - preview.rect.r0 + 1)}</small>
+                </span>
+              )}
+            </div>
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
           {clues.map((k, i) => (
