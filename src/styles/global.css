@@ -1,0 +1,277 @@
+/* Design tokens modelled on LinkedIn's games surfaces. Games should use these
+   variables (not hard-coded greys) so dark mode keeps working. */
+:root {
+  color-scheme: light;
+  --font: -apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', 'Fira Sans', Ubuntu, Oxygen, Cantarell, 'Droid Sans',
+    'Apple Color Emoji', 'Segoe UI Emoji', Helvetica, Arial, sans-serif;
+
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #f3f2ef;
+  --surface-3: #e9e5df;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.3);
+  --card-shadow: 0 0 0 1px rgba(140, 140, 140, 0.2), 0 2px 3px rgba(0, 0, 0, 0.04);
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --text: rgba(0, 0, 0, 0.9);
+  --text-2: rgba(0, 0, 0, 0.6);
+  --text-3: rgba(0, 0, 0, 0.45);
+  --text-on-color: #ffffff;
+
+  --brand: #0a66c2;
+  --brand-hover: #004182;
+  --brand-soft: #e8f3ff;
+  --success: #057642;
+  --success-soft: #daf2e2;
+  --warning: #915907;
+  --danger: #cc1016;
+  --danger-soft: #fde8e8;
+
+  /* Board primitives shared by the grid games */
+  --cell-bg: #ffffff;
+  --cell-bg-alt: #f7f6f3;
+  --cell-given: #eeebe6;
+  --grid-line: #d9d6d0;
+  --grid-line-strong: #1f1f1f;
+  --board-frame: #1f1f1f;
+  --cell-text: #1f1f1f;
+  --cell-select: #cfe4fb;
+  --cell-peer: #eef4fb;
+  --error-stripe: rgba(214, 45, 32, 0.28);
+  --error-text: #d62d20;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --pill: 999px;
+  --topbar-h: 52px;
+  --board-max: 480px;
+  --page-max: 1128px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #1b1f23;
+  --surface-2: #26292d;
+  --surface-3: #33373c;
+  --border: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.35);
+  --card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --overlay: rgba(0, 0, 0, 0.75);
+  --text: rgba(255, 255, 255, 0.9);
+  --text-2: rgba(255, 255, 255, 0.6);
+  --text-3: rgba(255, 255, 255, 0.45);
+  --brand: #71b7fb;
+  --brand-hover: #a8d4ff;
+  --brand-soft: #1c3552;
+  --success: #3ec27a;
+  --success-soft: #173a27;
+  --warning: #e7a33e;
+  --danger: #f5987e;
+  --danger-soft: #45201d;
+  --cell-bg: #2a2e33;
+  --cell-bg-alt: #24282c;
+  --cell-given: #3a3e44;
+  --grid-line: #474c52;
+  --grid-line-strong: #e6e6e6;
+  --board-frame: #e6e6e6;
+  --cell-text: #f1f1f1;
+  --cell-select: #1f4a73;
+  --cell-peer: #252f3a;
+  --error-stripe: rgba(255, 110, 90, 0.35);
+  --error-text: #ff8a75;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #000000;
+    --surface: #1b1f23;
+    --surface-2: #26292d;
+    --surface-3: #33373c;
+    --border: rgba(255, 255, 255, 0.15);
+    --border-strong: rgba(255, 255, 255, 0.35);
+    --card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    --overlay: rgba(0, 0, 0, 0.75);
+    --text: rgba(255, 255, 255, 0.9);
+    --text-2: rgba(255, 255, 255, 0.6);
+    --text-3: rgba(255, 255, 255, 0.45);
+    --brand: #71b7fb;
+    --brand-hover: #a8d4ff;
+    --brand-soft: #1c3552;
+    --success: #3ec27a;
+    --success-soft: #173a27;
+    --warning: #e7a33e;
+    --danger: #f5987e;
+    --danger-soft: #45201d;
+    --cell-bg: #2a2e33;
+    --cell-bg-alt: #24282c;
+    --cell-given: #3a3e44;
+    --grid-line: #474c52;
+    --grid-line-strong: #e6e6e6;
+    --board-frame: #e6e6e6;
+    --cell-text: #f1f1f1;
+    --cell-select: #1f4a73;
+    --cell-peer: #252f3a;
+    --error-stripe: rgba(255, 110, 90, 0.35);
+    --error-text: #ff8a75;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.43;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 20px;
+  border-radius: var(--pill);
+  border: 1px solid transparent;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color 0.15s, box-shadow 0.15s, color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+}
+:root[data-theme='dark'] .btn-primary {
+  color: #000;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .btn-primary {
+    color: #000;
+  }
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.btn-tertiary {
+  background: transparent;
+  color: var(--text-2);
+}
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.btn-block {
+  width: 100%;
+}
+.btn-sm {
+  min-height: 32px;
+  padding: 4px 14px;
+  font-size: 14px;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
