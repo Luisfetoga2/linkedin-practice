@@ -44,12 +44,13 @@ export const meta: GameMeta = {
     <>
       <p>Find the hidden words that snake through the grid.</p>
       <ul>
-        <li>Drag through neighboring letters — up, down, left or right, never diagonally — to spell a word.</li>
+        <li>Drag through neighboring letters — up, down, left or right, never diagonally — to draw a line. Lines stay on the board; a line that spells a hidden word lights up in color.</li>
+        <li>Start a drag on an existing line to continue it from that letter. Drag into the start or end of another line to join them, or through its middle to erase it.</li>
         <li>Words bend around the gray walls.</li>
         <li>Every letter is used by exactly one word, so a real word in the wrong place can block the rest.</li>
         <li>The slots below the grid show how long each hidden word is.</li>
-        <li>Drag or tap tile by tile (tap the last tile again to submit). On a keyboard, type letters or use the arrows, then Enter.</li>
-        <li>Stuck? Undo removes your last word, and Hint reveals the next letter of a word you're looking for.</li>
+        <li>You can also tap tile by tile. On a keyboard, type letters (or Space and the arrows), then Enter.</li>
+        <li>Stuck? Undo reverts your last move, and Hint reveals the next letter of a word you're looking for.</li>
       </ul>
     </>
   ),
