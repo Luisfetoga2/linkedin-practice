@@ -1,0 +1,348 @@
+.wrap {
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Clue stack ---------- */
+.stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  perspective: 900px;
+}
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Pinpoint blues, light → deep (dark mode: muted → vivid). */
+.c0 {
+  --shade: #b8d6ff;
+  --ink: #0b2a5b;
+}
+.c1 {
+  --shade: #8dbcff;
+  --ink: #0b2a5b;
+}
+.c2 {
+  --shade: #5f9dfb;
+  --ink: #06224d;
+}
+.c3 {
+  --shade: #3a7ff0;
+  --ink: #ffffff;
+}
+.c4 {
+  --shade: #1d5fd6;
+  --ink: #ffffff;
+}
+:global(:root[data-theme='dark']) .c0 {
+  --shade: #1e3a5f;
+  --ink: #dbe9ff;
+}
+:global(:root[data-theme='dark']) .c1 {
+  --shade: #214b80;
+  --ink: #e4efff;
+}
+:global(:root[data-theme='dark']) .c2 {
+  --shade: #2459a3;
+  --ink: #eef5ff;
+}
+:global(:root[data-theme='dark']) .c3 {
+  --shade: #2a6bc7;
+  --ink: #ffffff;
+}
+:global(:root[data-theme='dark']) .c4 {
+  --shade: #3480ea;
+  --ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .c0 {
+    --shade: #1e3a5f;
+    --ink: #dbe9ff;
+  }
+  :global(:root:not([data-theme='light'])) .c1 {
+    --shade: #214b80;
+    --ink: #e4efff;
+  }
+  :global(:root:not([data-theme='light'])) .c2 {
+    --shade: #2459a3;
+    --ink: #eef5ff;
+  }
+  :global(:root:not([data-theme='light'])) .c3 {
+    --shade: #2a6bc7;
+    --ink: #ffffff;
+  }
+  :global(:root:not([data-theme='light'])) .c4 {
+    --shade: #3480ea;
+    --ink: #ffffff;
+  }
+}
+
+.card {
+  height: 56px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  text-align: center;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+}
+.open {
+  background: var(--shade);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  animation: flipIn 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+.closed {
+  background: color-mix(in srgb, var(--shade) 20%, var(--surface));
+  border: 1.5px dashed color-mix(in srgb, var(--shade) 70%, var(--surface));
+  color: var(--text-3);
+}
+.word {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@keyframes flipIn {
+  0% {
+    transform: rotateX(-88deg) translateY(-6px);
+    opacity: 0.2;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Guess / hint notes beneath the card they were made on */
+.note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-2);
+  animation: noteIn 0.22s ease-out both;
+  min-width: 0;
+}
+.note > span,
+.note > s {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.noteWrong svg {
+  color: var(--error-text);
+  flex: none;
+}
+.noteWrong s {
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--text-3);
+}
+.noteHint {
+  color: var(--text-3);
+}
+.noteHint svg {
+  flex: none;
+  color: #b07d00;
+}
+.noteRight {
+  color: var(--success);
+  font-weight: 600;
+}
+.noteRight svg {
+  flex: none;
+}
+@keyframes noteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ---------- End states ---------- */
+.won .slot {
+  animation: wave 0.5s ease-in-out var(--wave-delay, 0ms) both;
+}
+@keyframes wave {
+  0%,
+  100% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  text-align: center;
+  animation: pop 0.38s cubic-bezier(0.2, 1.3, 0.4, 1) 0.45s both;
+}
+.bannerWin {
+  background: var(--success);
+  color: var(--surface);
+}
+.bannerLose {
+  background: var(--text);
+  color: var(--surface);
+}
+.bannerLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.bannerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.bannerName svg {
+  flex: none;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+/* ---------- Guess bar ---------- */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 6px 0 16px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+  transition: box-shadow 0.15s;
+}
+.inputRow:focus-within {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 17px; /* ≥16px so iOS doesn't zoom on focus */
+  font-weight: 500;
+  color: var(--text);
+}
+.input::placeholder {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.input:focus-visible {
+  outline: none;
+}
+.submit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--surface);
+  transition: opacity 0.15s, transform 0.1s;
+}
+.submit:active:not(:disabled) {
+  transform: scale(0.93);
+}
+.submit:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.left {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.shake {
+  animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-6px);
+  }
+  40%,
+  60% {
+    transform: translateX(6px);
+  }
+}
+
+/* ---------- Results sheet summary ---------- */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.summaryWords {
+  color: var(--text-2);
+  font-size: 14px;
+}

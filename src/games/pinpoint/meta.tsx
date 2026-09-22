@@ -24,11 +24,12 @@ export const meta: GameMeta = {
   Icon,
   howToPlay: (
     <>
-      <p>Guess the category that links the words.</p>
+      <p>Five clue words all belong to one hidden category. Pinpoint it in as few guesses as you can.</p>
       <ul>
-        <li>You start with one word. Each wrong guess reveals another clue word.</li>
-        <li>You have 5 guesses to pinpoint the category.</li>
-        <li>Close answers count — you don’t need the exact wording.</li>
+        <li>You start with one clue. Type the category and press Enter.</li>
+        <li>Each wrong guess reveals the next clue. You have 5 guesses.</li>
+        <li>Close answers count — “keys” works for <em>Things with keys</em>.</li>
+        <li>Stuck? <strong>Hint</strong> reveals the next clue, but it costs a guess.</li>
       </ul>
     </>
   ),
