@@ -1,0 +1,368 @@
+.wrap {
+  --cc-gap: 8px;
+  /* Square letter boxes: fit the row width, and shrink on short screens so the keyboard stays visible. */
+  --cc-cell: clamp(
+    34px,
+    min(calc((min(100vw, 480px) - 24px - 96px - (var(--cc-n) - 1) * 6px) / var(--cc-n)), calc((100dvh - 520px) / 7)),
+    52px
+  );
+  --cc-pitch: calc(var(--cc-cell) + var(--cc-gap));
+  --cc-sel: color-mix(in srgb, var(--game-color) 15%, var(--cell-bg));
+  --cc-sel-strong: color-mix(in srgb, var(--game-color) 28%, var(--cell-bg));
+  --cc-solved: color-mix(in srgb, var(--success) 16%, var(--cell-bg));
+  --cc-solved-line: color-mix(in srgb, var(--success) 55%, var(--grid-line));
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+/* ---------- Clue card ---------- */
+.clueCard {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 84px;
+  padding: 8px 6px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+}
+.arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+}
+.arrow:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.clueBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  padding: 0 4px;
+}
+.clueText {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+.clueStrong {
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--text);
+}
+.clueSub {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.clueLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--game-color);
+}
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-2);
+  animation: cc-fade 0.25s ease-out;
+}
+
+/* ---------- Ladder ---------- */
+.ladder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-gap);
+  padding: 14px 8px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.middle {
+  position: relative;
+  height: calc(5 * var(--cc-cell) + 4 * var(--cc-gap));
+}
+.row {
+  display: grid;
+  grid-template-columns: 36px auto 36px;
+  justify-content: center;
+  align-items: center;
+  column-gap: 6px;
+  height: var(--cc-cell);
+}
+.midRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(calc(var(--slot, 0) * var(--cc-pitch)));
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.rowDragging {
+  transition: none;
+  z-index: 3;
+}
+.rowDragging .cell {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+.rowDragging .handle {
+  cursor: grabbing;
+}
+.rowGrab {
+  cursor: grab;
+  touch-action: none;
+}
+.cells {
+  display: grid;
+  grid-template-columns: repeat(var(--cc-n), var(--cc-cell));
+  grid-template-rows: var(--cc-cell);
+  gap: 6px;
+}
+.cell {
+  width: var(--cc-cell);
+  height: var(--cc-cell);
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 2px solid var(--grid-line);
+  background: var(--cell-bg);
+  color: var(--cell-text);
+  font-size: calc(var(--cc-cell) * 0.46);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.18s, border-color 0.18s;
+  position: relative;
+}
+.cellFilled {
+  border-color: color-mix(in srgb, var(--cell-text) 35%, var(--grid-line));
+}
+.cellGiven {
+  color: var(--game-color);
+}
+.cellGiven::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+.rowSel .cell {
+  background: var(--cc-sel);
+  border-color: color-mix(in srgb, var(--game-color) 55%, var(--grid-line));
+}
+.rowSel .cellActive {
+  background: var(--cc-sel-strong);
+  border-color: var(--game-color);
+  box-shadow: 0 0 0 1.5px var(--game-color);
+}
+.rowSolved .cell {
+  background: var(--cc-solved);
+  border-color: var(--cc-solved-line);
+}
+.rowSolved.rowSel .cell {
+  border-color: color-mix(in srgb, var(--game-color) 70%, var(--success));
+}
+.rowFlagged .cell {
+  border-color: var(--error-text);
+  background: color-mix(in srgb, var(--error-text) 12%, var(--cell-bg));
+  animation: cc-flag 1.1s ease-in-out 2;
+}
+.side {
+  width: 36px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--success);
+}
+.lock {
+  color: var(--text-3);
+}
+.handle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: min(44px, var(--cc-cell));
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: grab;
+  touch-action: none;
+}
+.handle:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.rowLocked .cell {
+  background: var(--cell-given);
+  border-color: transparent;
+  cursor: default;
+}
+.rowLocked {
+  opacity: 0.85;
+}
+.rowUnlock .cells {
+  animation: cc-unlock 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.rowFixed {
+  cursor: default;
+}
+.link {
+  position: absolute;
+  left: 50%;
+  top: calc((var(--slot) + 1) * var(--cc-pitch) - var(--cc-gap));
+  width: 4px;
+  height: var(--cc-gap);
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--success);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.won .cell {
+  background: var(--cc-solved);
+  border-color: var(--cc-solved-line);
+}
+
+/* ---------- Keyboard ---------- */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.2s;
+}
+.kbDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.kbRow {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 44px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  touch-action: manipulation;
+  transition: background-color 0.1s, transform 0.08s;
+}
+.key:hover {
+  background: color-mix(in srgb, var(--surface-3) 80%, var(--text) 8%);
+}
+.key:active {
+  transform: scale(0.95);
+}
+.keyWide {
+  flex: 1.6 1 0;
+  max-width: 70px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+@media (max-width: 480px) {
+  .key {
+    height: 46px;
+  }
+}
+@media (max-height: 700px) {
+  .key {
+    height: 42px;
+  }
+}
+
+/* ---------- Results summary ---------- */
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.summaryLabel {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.summaryWords {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.summaryWords span {
+  min-width: 88px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--game-color) 14%, var(--surface));
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+@keyframes cc-unlock {
+  from {
+    opacity: 0.2;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cc-flag {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--error-text) 35%, transparent);
+  }
+}

@@ -31,13 +31,22 @@ export const meta: GameMeta = {
       ],
     },
   ],
+  settings: [
+    {
+      key: 'links',
+      label: 'Show matching neighbors',
+      description: 'Mark solved rows that already differ from the row below by one letter.',
+      default: false,
+    },
+  ],
   howToPlay: (
     <>
       <p>Guess words from the clues, then order them into a word ladder.</p>
       <ul>
-        <li>Answer the five middle clues in any order.</li>
-        <li>Drag the rows so each word differs from its neighbors by exactly one letter.</li>
+        <li>Answer the five middle clues in any order. Tap a row (or use the arrows on the clue card) to see its clue.</li>
+        <li>Drag the rows by the ≡ handle so each word differs from its neighbors by exactly one letter.</li>
         <li>Once the ladder is in order, the top and bottom rows unlock. Solve them to finish.</li>
+        <li>Stuck? A hint reveals a letter, or points out a row that is out of place.</li>
       </ul>
     </>
   ),
