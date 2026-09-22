@@ -1,15 +1,17 @@
 import { createRng, type Rng } from '../../lib/rng';
-import { getClueBank, type WordLength } from './data';
+import { getClueBank, getPairs, type EndPair, type WordLength } from './data';
 
 export const RUNGS = 7;
 export const MIDDLE = RUNGS - 2;
 
 export interface Ladder {
   length: WordLength;
-  /** Solution ladder, top → bottom (uppercase). Middle rungs are indices 1..5. */
+  /** Solution ladder, top → bottom (uppercase). Middle rungs are indices 1..5; 0 and 6 are the end pair. */
   words: string[];
-  /** One chosen clue per rung, aligned with `words`. */
+  /** One chosen clue per rung, aligned with `words`. The top and bottom rung share `endClue`. */
   clues: string[];
+  /** Shared clue for the top (`words[0]`) and bottom (`words[6]`) rungs, e.g. a compound or a pair. */
+  endClue: string;
   /** Initial (shuffled) display order of the middle rungs, as indices into `words` (values 1..5). */
   order: number[];
 }
@@ -62,6 +64,7 @@ export function countLadderOrders(words: readonly string[]): number {
 
 interface Graph {
   words: string[];
+  index: Map<string, number>;
   adj: number[][];
   adjSet: Set<number>[];
   starts: number[];
@@ -74,6 +77,7 @@ export function getGraph(length: WordLength): Graph {
   if (g) return g;
   const bank = getClueBank(length);
   const words = [...bank.keys()];
+  const index = new Map(words.map((w, i) => [w, i]));
   const adj: number[][] = words.map(() => []);
   const buckets = new Map<string, number[]>();
   words.forEach((w, i) => {
@@ -86,49 +90,81 @@ export function getGraph(length: WordLength): Graph {
   });
   for (const list of buckets.values()) for (const a of list) for (const b of list) if (a !== b) adj[a].push(b);
   const adjSet = adj.map((a) => new Set(a));
-  // Start from words that can sit mid-ladder (≥2 neighbours) so the first step rarely dead-ends.
   const starts = words.map((_, i) => i).filter((i) => adj[i].length >= 2);
-  g = { words, adj, adjSet, starts };
+  g = { words, index, adj, adjSet, starts };
   graphs.set(length, g);
   return g;
 }
 
+/** Breadth-first distances (in single-letter steps) from `from` to every word; unreachable = Infinity. */
+function distancesFrom(g: Graph, from: number): number[] {
+  const dist = new Array<number>(g.words.length).fill(Infinity);
+  dist[from] = 0;
+  const queue = [from];
+  for (let h = 0; h < queue.length; h++) {
+    const u = queue[h];
+    for (const v of g.adj[u]) {
+      if (dist[v] === Infinity) {
+        dist[v] = dist[u] + 1;
+        queue.push(v);
+      }
+    }
+  }
+  return dist;
+}
+
 /**
- * Random induced (chordless) path of RUNGS words: no two non-consecutive rungs are one letter
- * apart. That guarantees the middle five have exactly one valid ordering (up to reversal) and the
- * top/bottom rungs attach only to their own ends.
+ * Random induced (chordless) path of RUNGS words from `top` to `bottom`: every rung differs from its
+ * neighbours by one letter and no two non-consecutive rungs do. That guarantees the middle five have
+ * exactly one valid ordering (up to reversal) and that the fixed end rungs attach only to their own
+ * end of the chain. The changed letter positions must also vary (at least 3 distinct positions).
+ * Returns word indices, or null when no such ladder exists (or the search budget runs out).
  */
-function findPath(g: Graph, rng: Rng, budget: { left: number }): number[] | null {
+export function findPairLadder(g: Graph, top: number, bottom: number, rng: Rng | null, budget = 50_000): number[] | null {
   const { adj, adjSet } = g;
+  if (top === bottom || adjSet[top].has(bottom)) return null;
   const L = g.words[0].length;
-  const start = g.starts[rng.int(0, g.starts.length - 1)];
-  const path = [start];
+  const toBottom = distancesFrom(g, bottom);
+  if (toBottom[top] > RUNGS - 1) return null;
+  const path = [top];
   const onPath = new Set(path);
   const positions: number[] = [];
+  let left = budget;
 
   const rec = (): boolean => {
-    if (path.length === RUNGS) return new Set(positions).size >= Math.min(3, L);
-    if (--budget.left <= 0) return false;
-    const last = path[path.length - 1];
-    for (const n of rng.shuffle(adj[last])) {
-      if (onPath.has(n)) continue;
+    const k = path.length; // index of the rung being placed
+    const last = path[k - 1];
+    if (k === RUNGS - 1) {
+      if (!adjSet[last].has(bottom)) return false;
+      const pos = new Set(positions);
+      pos.add(diffIndex(g.words[last], g.words[bottom]));
+      if (pos.size < Math.min(3, L)) return false;
+      path.push(bottom);
+      return true;
+    }
+    if (--left <= 0) return false;
+    const next = rng ? rng.shuffle(adj[last]) : adj[last];
+    for (const n of next) {
+      if (onPath.has(n) || n === bottom) continue;
+      if (toBottom[n] > RUNGS - 1 - k) continue;
+      // Only the last middle rung may touch the bottom word.
+      if (k < RUNGS - 2 && adjSet[n].has(bottom)) continue;
       let chord = false;
-      for (let k = 0; k < path.length - 1; k++) {
-        if (adjSet[n].has(path[k])) {
+      for (let j = 0; j < k - 1; j++) {
+        if (adjSet[n].has(path[j])) {
           chord = true;
           break;
         }
       }
       if (chord) continue;
-      const pos = diffIndex(g.words[last], g.words[n]);
       path.push(n);
       onPath.add(n);
-      positions.push(pos);
+      positions.push(diffIndex(g.words[last], g.words[n]));
       if (rec()) return true;
       positions.pop();
       onPath.delete(n);
       path.pop();
-      if (budget.left <= 0) return false;
+      if (left <= 0) return false;
     }
     return false;
   };
@@ -139,20 +175,31 @@ export function generateLadder(seed: number, length: WordLength): Ladder {
   const rng = createRng(seed);
   const g = getGraph(length);
   const bank = getClueBank(length);
+  const pairs = getPairs(length);
   let path: number[] | null = null;
-  for (let attempt = 0; attempt < 400 && !path; attempt++) {
-    path = findPath(g, rng, { left: 400 });
+  let pair: EndPair | null = null;
+  // Pairs are tried in a seed-determined order; every committed pair is known to be feasible, so the
+  // first one normally succeeds and the rest are only a safety net.
+  for (const i of rng.shuffle(pairs.map((_, k) => k))) {
+    const p = pairs[i];
+    const a = g.index.get(p.top);
+    const b = g.index.get(p.bottom);
+    if (a === undefined || b === undefined) continue;
+    path = findPairLadder(g, a, b, rng);
+    if (path) {
+      pair = p;
+      break;
+    }
   }
-  if (!path) throw new Error('Crossclimb: could not build a ladder');
-  let words = path.map((i) => g.words[i]);
-  if (rng.chance(0.5)) words = words.reverse();
-  const clues = words.map((w) => rng.pick(bank.get(w)!));
+  if (!path || !pair) throw new Error('Crossclimb: could not build a ladder');
+  const words = path.map((i) => g.words[i]);
+  const clues = words.map((w, i) => (i === 0 || i === RUNGS - 1 ? pair.clue : rng.pick(bank.get(w)!)));
 
   const solved = [1, 2, 3, 4, 5];
   let order = rng.shuffle(solved);
   // Never hand out an order that is already mostly chained together (at most one correct neighbor pair).
   for (let i = 0; i < 100 && goodLinks(order) > 1; i++) order = rng.shuffle(solved);
-  return { length, words, clues, order };
+  return { length, words, clues, endClue: pair.clue, order };
 }
 
 /** Adjacent pairs in a shuffled middle order that are also neighbors in the solution. */

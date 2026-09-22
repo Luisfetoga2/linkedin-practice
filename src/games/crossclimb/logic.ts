@@ -23,6 +23,14 @@ export function computePhase(words: readonly string[], entries: readonly (readon
   return 'done';
 }
 
+/**
+ * The end rungs are a fixed pair (top word first, e.g. FIRE over WORK), so once the middle is in a
+ * valid order it is shown top-to-bottom: a reversed (but valid) order is flipped.
+ */
+export function forwardOrder(order: readonly number[]): number[] {
+  return order[0] === MIDS[0] ? order.slice() : order.slice().reverse();
+}
+
 /** Row a letter/word hint applies to: the selected row, or else the first incorrect row in `seq`. */
 export function hintRow(selected: number, seq: readonly number[], words: readonly string[], entries: readonly (readonly string[])[]): number | null {
   if (seq.includes(selected) && !isCorrect(words[selected], entries[selected])) return selected;

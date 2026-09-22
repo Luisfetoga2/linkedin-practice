@@ -5,7 +5,7 @@ import { Bulb, Check } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import type { WordLength } from './data';
 import { generateLadder, MIDDLE, oneApart, RUNGS } from './generator';
-import { computePhase, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
+import { computePhase, forwardOrder, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
 import { Keyboard } from './Keyboard';
 import styles from './Game.module.css';
 
@@ -41,7 +41,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const length: WordLength = options.length === '5' ? 5 : 4;
   const N = length;
   const ladder = useMemo(() => generateLadder(seed, length), [seed, length]);
-  const { words, clues } = ladder;
+  const { words, clues, endClue } = ladder;
   const [showLinks] = useGameSetting<boolean>('crossclimb', 'links', false);
 
   const [order, setOrder] = useState<number[]>(ladder.order);
@@ -272,7 +272,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (phase === 'order') setNote(null);
     if (phase === 'final') {
       setNote(from === 'clues' ? 'All the words are correct and already in order!' : null);
-      setSel({ w: topW, c: firstEmptyCol(topW) });
+      // The end pair reads top-to-bottom (e.g. FIRE over WORK), so a reversed ladder flips upright.
+      const fwd = forwardOrder(order);
+      if (fwd[0] !== order[0]) setOrder(fwd);
+      setSel({ w: 0, c: firstEmptyCol(0) });
     }
     if (phase === 'done' && !doneRef.current) {
       doneRef.current = true;
@@ -423,11 +426,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       );
     if (phase === 'done') return <strong className={styles.clueStrong}>You climbed the whole ladder!</strong>;
     if (phase === 'final') {
-      const label = sel.w === topW ? 'Top rung' : 'Bottom rung';
+      // One shared clue for both end rungs, whichever of the two is selected.
       return (
         <>
-          <span className={styles.clueLabel}>{label} unlocked</span>
-          <span className={styles.clueText}>{clues[sel.w]}</span>
+          <span className={styles.clueLabel}>Top + bottom</span>
+          <span className={styles.clueText}>{endClue}</span>
         </>
       );
     }

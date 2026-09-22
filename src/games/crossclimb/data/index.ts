@@ -10,6 +10,8 @@ import c5aa from './clues5_aa';
 import c5ab from './clues5_ab';
 import c5ac from './clues5_ac';
 import c5ad from './clues5_ad';
+import p4 from './pairs4';
+import p5 from './pairs5';
 
 export type WordLength = 4 | 5;
 
@@ -49,4 +51,40 @@ export function getClueBank(length: WordLength): ClueBank {
     cache.set(length, bank);
   }
   return bank;
+}
+
+/** A top/bottom rung pair: two related words (or a compound, top first) sharing one clue. */
+export interface EndPair {
+  top: string;
+  bottom: string;
+  clue: string;
+}
+
+const PAIR_SOURCES: Record<WordLength, string> = { 4: p4, 5: p5 };
+
+export function parsePairs(length: number, text: string): EndPair[] {
+  const out: EndPair[] = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const [top, bottom, ...rest] = line.split('|').map((s) => s.trim());
+    const clue = rest.join('|');
+    const t = (top ?? '').toUpperCase();
+    const b = (bottom ?? '').toUpperCase();
+    if (t.length !== length || b.length !== length || !/^[A-Z]+$/.test(t + b) || !clue) continue;
+    out.push({ top: t, bottom: b, clue });
+  }
+  return out;
+}
+
+const pairCache = new Map<WordLength, EndPair[]>();
+
+/** Curated end-rung pairs for a word length, in file order (deterministic). */
+export function getPairs(length: WordLength): EndPair[] {
+  let pairs = pairCache.get(length);
+  if (!pairs) {
+    pairs = parsePairs(length, PAIR_SOURCES[length]);
+    pairCache.set(length, pairs);
+  }
+  return pairs;
 }

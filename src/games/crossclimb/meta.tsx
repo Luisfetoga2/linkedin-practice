@@ -46,7 +46,7 @@ export const meta: GameMeta = {
         <li>Answer the five middle clues in any order. Tap a row (or use the arrows on the clue card) to see its clue.</li>
         <li>You won't be told whether a single answer is right. Once all five are correct, you'll be asked to put them in order.</li>
         <li>Drag the rows by the ≡ handle so each word differs from its neighbors by exactly one letter.</li>
-        <li>Once the ladder is in order, the top and bottom rows unlock. Solve them to finish.</li>
+        <li>Once the ladder is in order, the top and bottom rows unlock. They share a single clue: two related words, or a compound read top then bottom. Solve both to finish.</li>
         <li>Stuck? A hint reveals the next letter, tells you when a filled-in word isn't right, or points out a row that is out of place.</li>
       </ul>
     </>

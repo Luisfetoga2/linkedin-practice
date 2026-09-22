@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateLadder, isLadder } from './generator';
-import { computePhase, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint } from './logic';
+import { computePhase, forwardOrder, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint } from './logic';
 
 const lad = generateLadder(4242, 4);
 const { words } = lad;
@@ -107,5 +107,15 @@ describe('orderHint', () => {
     expect(orderHint(solvedOrder, words)).toBeNull();
     expect(orderHint([...solvedOrder].reverse(), words)).toBeNull();
     expect(isLadder(solvedOrder.map((i) => words[i]))).toBe(true);
+  });
+});
+
+describe('forwardOrder', () => {
+  it('keeps a forward ladder and flips a reversed one so the end pair reads top-to-bottom', () => {
+    expect(forwardOrder(solvedOrder)).toEqual(solvedOrder);
+    expect(forwardOrder([5, 4, 3, 2, 1])).toEqual(solvedOrder);
+    const input = [5, 4, 3, 2, 1];
+    forwardOrder(input);
+    expect(input).toEqual([5, 4, 3, 2, 1]);
   });
 });
