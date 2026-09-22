@@ -4,15 +4,13 @@ import { ControlBar, ControlButton } from '../../core/components/Controls';
 import { Bulb, Check } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import type { WordLength } from './data';
-import { generateLadder, isLadder, MIDDLE, oneApart, RUNGS } from './generator';
+import { generateLadder, MIDDLE, oneApart, RUNGS } from './generator';
+import { computePhase, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
 import { Keyboard } from './Keyboard';
 import styles from './Game.module.css';
 
-type Phase = 'clues' | 'order' | 'final' | 'done';
-
 /** Vertical gap between rungs in px (mirrored by --cc-gap in the CSS module). */
 const GAP = 8;
-const MIDS = [1, 2, 3, 4, 5];
 
 interface DragState {
   w: number;
@@ -59,19 +57,18 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const doneRef = useRef(false);
 
   // ---- derived state -------------------------------------------------------
-  const isSolved = (w: number, ent = entries) => ent[w].join('') === words[w];
-  const solved = words.map((_, i) => isSolved(i));
-  const midsSolved = MIDS.every((i) => solved[i]);
-  const orderOk = isLadder(order.map((i) => words[i]));
+  // Correctness is never shown while typing: middle rows are judged together once all are right,
+  // and the top/bottom rows only when the round is finished.
+  const phase: Phase = computePhase(words, entries, order);
   const forward = order[0] === 1;
   const topW = forward ? 0 : RUNGS - 1;
   const botW = forward ? RUNGS - 1 : 0;
-  const phase: Phase = !midsSolved ? 'clues' : !orderOk ? 'order' : !(solved[0] && solved[RUNGS - 1]) ? 'final' : 'done';
   const unlocked = phase === 'final' || phase === 'done';
+  const midsShownSolved = phase !== 'clues';
 
-  const editable = (w: number, ent = entries): boolean => {
-    if (phase === 'clues') return w >= 1 && w <= MIDDLE && !isSolved(w, ent);
-    if (phase === 'final') return (w === 0 || w === RUNGS - 1) && !isSolved(w, ent);
+  const editable = (w: number): boolean => {
+    if (phase === 'clues') return w >= 1 && w <= MIDDLE;
+    if (phase === 'final') return w === topW || w === botW;
     return false;
   };
   const selectableSeq = (): number[] => {
@@ -87,60 +84,30 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   }, [onReady]);
 
   // ---- helpers ---------------------------------------------------------------
-  const nextOpenCol = (w: number, from: number): number => {
-    for (let c = from; c < N; c++) if (!given[w][c]) return c;
+  const nextOpenCol = (w: number, from: number, giv = given): number => {
+    for (let c = from; c < N; c++) if (!giv[w][c]) return c;
     return -1;
   };
-  const firstEmptyCol = (w: number, ent = entries): number => {
-    for (let c = 0; c < N; c++) if (!ent[w][c] && !given[w][c]) return c;
-    const open = nextOpenCol(w, 0);
+  const firstEmptyCol = (w: number, ent = entries, giv = given): number => {
+    for (let c = 0; c < N; c++) if (!ent[w][c] && !giv[w][c]) return c;
+    const open = nextOpenCol(w, 0, giv);
     return open < 0 ? 0 : open;
   };
 
-  const animateRow = (key: string, kind: 'shake' | 'pop') => {
-    const el = rowEls.current.get(key)?.querySelector(`.${styles.cells}`) as HTMLElement | null;
-    if (!el?.animate) return;
-    if (kind === 'shake') {
-      el.animate(
-        [
-          { transform: 'translateX(0)' },
-          { transform: 'translateX(-7px)' },
-          { transform: 'translateX(6px)' },
-          { transform: 'translateX(-4px)' },
-          { transform: 'translateX(3px)' },
-          { transform: 'translateX(0)' },
-        ],
-        { duration: 380, easing: 'ease-out' },
-      );
-    } else {
-      el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.045)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
-    }
-  };
-
-  /** Move the cursor to the next unsolved row (display order), wrapping around. */
-  const advanceFrom = (w: number, ent: string[][], seq: number[]) => {
-    const idx = seq.indexOf(w);
-    for (let k = 1; k <= seq.length; k++) {
-      const cand = seq[(idx + k + seq.length) % seq.length];
-      if (!isSolved(cand, ent)) {
-        setSel({ w: cand, c: firstEmptyCol(cand, ent) });
+  /** Once a row is full, move on to the next row that still has empty boxes (pure navigation). */
+  const afterFill = (w: number, ent: string[][], giv: boolean[][], col: number) => {
+    if (ent[w].every(Boolean)) {
+      const next = nextRowWithEmpty(selectableSeq(), w, ent);
+      if (next !== null) {
+        setSel({ w: next, c: firstEmptyCol(next, ent, giv) });
         return;
       }
-    }
-  };
-
-  const rowKey = (w: number) => (unlocked && w === topW ? 'T' : unlocked && w === botW ? 'B' : String(w));
-
-  const afterFill = (w: number, row: string[], ent: string[][], col: number) => {
-    if (row.every(Boolean)) {
-      if (row.join('') === words[w]) {
-        animateRow(rowKey(w), 'pop');
-        advanceFrom(w, ent, selectableSeq());
-        return;
-      }
-      animateRow(rowKey(w), 'shake');
     }
     setSel({ w, c: col });
+  };
+
+  const clearFlag = (w: number) => {
+    if (flagged === w) setFlagged(null);
   };
 
   // ---- input actions -----------------------------------------------------------
@@ -155,8 +122,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const ent = entries.map((r, i) => (i === w ? row : r));
     setEntries(ent);
     setNote(null);
+    clearFlag(w);
     const nc = nextOpenCol(w, c + 1);
-    afterFill(w, row, ent, nc < 0 ? c : nc);
+    afterFill(w, ent, given, nc < 0 ? c : nc);
   };
 
   const backspace = () => {
@@ -175,6 +143,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setEntries(entries.map((r, i) => (i === w ? row : r)));
     setSel({ w, c });
     setNote(null);
+    clearFlag(w);
   };
 
   const stepRow = (delta: number) => {
@@ -184,6 +153,15 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const next = seq[(Math.max(idx, 0) + delta + seq.length) % seq.length];
     setSel({ w: next, c: editable(next) ? firstEmptyCol(next) : 0 });
     setNote(null);
+  };
+
+  const enter = () => {
+    const next = nextRowWithEmpty(selectableSeq(), sel.w, entries);
+    if (next === null || next === sel.w) stepRow(1);
+    else {
+      setSel({ w: next, c: firstEmptyCol(next) });
+      setNote(null);
+    }
   };
 
   const commitMove = (from: number, to: number) => {
@@ -214,41 +192,35 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (paused) return;
     if (phase === 'clues' || phase === 'final') {
       const seq = selectableSeq();
-      const w = editable(sel.w) ? sel.w : seq.find((i) => !solved[i]);
-      if (w === undefined) return;
-      const cur = entries[w];
-      let c = cur.findIndex((ch, i) => ch !== '' && ch !== words[w][i]);
-      const fixingMistake = c >= 0;
-      if (c < 0) c = cur.findIndex((ch, i) => ch !== words[w][i]);
-      if (c < 0) return;
-      const row = cur.slice();
+      const w = hintRow(sel.w, seq, words, entries);
+      if (w === null) return;
+      const act = letterHint(words[w], entries[w], given[w]);
+      if (!act) return;
+      onHint();
+      if (act.kind === 'wrong') {
+        // Whole-word verdict only: letters stay as typed and no position is singled out.
+        setFlagged(w);
+        setSel({ w, c: sel.w === w ? sel.c : firstEmptyCol(w) });
+        setNote("This word isn't right.");
+        return;
+      }
+      const c = act.col;
+      const row = entries[w].slice();
       row[c] = words[w][c];
       const ent = entries.map((r, i) => (i === w ? row : r));
+      const giv = given.map((r, i) => (i === w ? r.map((v, j) => v || j === c) : r));
       setEntries(ent);
-      setGiven(given.map((r, i) => (i === w ? r.map((v, j) => v || j === c) : r)));
-      onHint();
-      setNote(fixingMistake ? `Fixed a wrong letter (box ${c + 1})` : null);
-      if (row.join('') === words[w]) {
-        animateRow(rowKey(w), 'pop');
-        advanceFrom(w, ent, seq);
-      } else {
-        let nc = -1;
-        for (let i = 0; i < N; i++) if (!row[i] && i !== c) { nc = i; break; }
-        setSel({ w, c: nc < 0 ? c : nc });
-      }
+      setGiven(giv);
+      setFlagged(null);
+      setNote(null);
+      let nc = -1;
+      for (let i = 0; i < N; i++) if (!row[i] && !giv[w][i]) { nc = i; break; }
+      afterFill(w, ent, giv, nc < 0 ? c : nc);
       return;
     }
     if (phase === 'order') {
-      const ws = order.map((i) => words[i]);
-      const link = (k: number) => oneApart(ws[k], ws[k + 1]);
-      const lonely = order.filter((_, k) => !(k > 0 && link(k - 1)) && !(k < MIDDLE - 1 && link(k)));
-      const fwd = MIDS;
-      const rev = [...MIDS].reverse();
-      const score = (t: number[]) => order.reduce((n, v, i) => n + (v === t[i] ? 1 : 0), 0);
-      const target = score(fwd) >= score(rev) ? fwd : rev;
-      const misplaced = order.filter((v, i) => v !== target[i]);
-      const pick = lonely.find((v) => misplaced.includes(v)) ?? lonely[0] ?? misplaced[0];
-      if (pick === undefined) return;
+      const pick = orderHint(order, words);
+      if (pick === null) return;
       setFlagged(pick);
       setSel({ w: pick, c: 0 });
       setNote("This row doesn't belong here. Try moving it.");
@@ -261,7 +233,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (paused || phase === 'done') return;
     if (/^[A-Z]$/.test(key)) typeLetter(key);
     else if (key === 'Backspace') backspace();
-    else if (key === 'Enter') advanceFrom(sel.w, entries, selectableSeq());
+    else if (key === 'Enter') enter();
     else if (key === 'ArrowLeft') setSel({ w: sel.w, c: Math.max(0, sel.c - 1) });
     else if (key === 'ArrowRight') setSel({ w: sel.w, c: Math.min(N - 1, sel.c + 1) });
     else if (key === 'ArrowUp') {
@@ -299,7 +271,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setFlagged(null);
     if (phase === 'order') setNote(null);
     if (phase === 'final') {
-      setNote(null);
+      setNote(from === 'clues' ? 'All the words are correct and already in order!' : null);
       setSel({ w: topW, c: firstEmptyCol(topW) });
     }
     if (phase === 'done' && !doneRef.current) {
@@ -422,7 +394,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const renderEnd = (slot: 'T' | 'B') => {
     const w = unlocked ? (slot === 'T' ? topW : botW) : null;
     const isSel = w !== null && sel.w === w && phase === 'final';
-    const done = w !== null && solved[w];
+    const done = w !== null && phase === 'done';
     return (
       <div
         key={slot}
@@ -445,7 +417,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (phase === 'order')
       return (
         <>
-          <strong className={styles.clueStrong}>Great! Now drag the rows into the right order</strong>
+          <strong className={styles.clueStrong}>All the words are correct — now drag them into the right order</strong>
           {!note && <span className={styles.clueSub}>Neighbors must differ by exactly one letter</span>}
         </>
       );
@@ -499,7 +471,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             const slot = preview.indexOf(w);
             const isDragging = drag?.w === w && drag.moved;
             const isSel = sel.w === w && (phase === 'clues' || phase === 'order');
-            const done = solved[w];
+            const done = midsShownSolved;
             const style: CSSProperties = isDragging
               ? { transform: `translateY(${drag!.from * drag!.pitch + drag!.dy}px)` }
               : ({ '--slot': slot } as CSSProperties);
@@ -546,10 +518,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           })}
           {showLinks &&
             !drag &&
-            (phase === 'clues' || phase === 'order') &&
+            phase === 'order' &&
             order.slice(0, -1).map((w, k) => {
               const nxt = order[k + 1];
-              if (!solved[w] || !solved[nxt] || !oneApart(words[w], words[nxt])) return null;
+              if (!oneApart(words[w], words[nxt])) return null;
               return <span key={`${w}-${nxt}`} className={styles.link} style={{ '--slot': k } as CSSProperties} aria-hidden />;
             })}
         </div>

@@ -230,7 +230,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   });
 
   const conflicts = useMemo(() => (showErrors ? findConflicts(values) : new Set<number>()), [showErrors, values]);
-  const peers = useMemo(() => new Set(selected === null ? [] : PEERS[selected]), [selected]);
   const selDigit = selected !== null ? values[selected] : 0;
   const hintArea = useMemo(() => new Set(hint?.area ?? []), [hint]);
   const hintPattern = useMemo(() => new Set(hint?.pattern ?? []), [hint]);
@@ -264,7 +263,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           else if (hintPattern.has(i)) cls.push(styles.hintPattern);
           else if (hintArea.has(i)) cls.push(styles.hintArea);
           else if (selDigit && v === selDigit) cls.push(styles.same);
-          else if (peers.has(i)) cls.push(styles.peer);
           if (conflicts.has(i)) cls.push(styles.conflictText);
           if (hint?.mistake && hint.cell === i) cls.push(styles.mistake);
           const label = `Row ${r + 1}, column ${c + 1}: ${v || 'empty'}${locked[i] ? ', given' : ''}`;
@@ -277,7 +275,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
               style={{ '--d': `${(r + c) * 40}ms` } as CSSProperties}
               aria-label={label}
               aria-selected={i === selected}
-              onClick={() => selectCell(i)}
+              onPointerDown={(e) => {
+                // Select on press (not release) so a digit typed right after the tap lands here.
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                selectCell(i);
+              }}
             >
               {v ? (
                 <span key={`${v}-${i === lastPlaced}`} className={`${styles.digit}${!locked[i] && i === lastPlaced ? ` ${styles.pop}` : ''}`}>

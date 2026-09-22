@@ -340,13 +340,8 @@
 }
 .stats-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  padding: 2px;
-  scrollbar-width: none;
-}
-.stats-tabs::-webkit-scrollbar {
-  display: none;
 }
 .stats-tab {
   flex: none;

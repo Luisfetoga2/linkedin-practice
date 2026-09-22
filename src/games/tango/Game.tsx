@@ -121,6 +121,13 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setCell(i, cycle(live.current.board[i]));
   };
 
+  // Right-click places a moon directly (or clears an existing moon).
+  const placeMoon = (i: number) => {
+    if (inputBlocked) return;
+    setCursor(i);
+    setCell(i, live.current.board[i] === MOON ? 0 : MOON);
+  };
+
   const undo = () => {
     const h = live.current.history;
     if (inputBlocked || !h.length) return;
@@ -274,6 +281,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                 style={{ '--d': `${(r + c) * 45}ms` } as CSSProperties}
                 aria-label={label}
                 onClick={() => tap(i)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  placeMoon(i);
+                }}
                 aria-disabled={locked[i] || undefined}
               >
                 {v !== 0 && (

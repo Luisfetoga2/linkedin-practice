@@ -8,7 +8,6 @@ import { DOWN, LEFT, RIGHT, UP, buildAdjacency, generateZip, step, type ZipPuzzl
 import styles from './Game.module.css';
 
 const U = 100; // SVG units per cell
-const HINT_MAX_CELLS = 6;
 const HINT_STEP_MS = 90;
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -270,17 +269,16 @@ function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & {
     let k = 0;
     while (k < p.length && p[k] === solution[k]) k++;
     const trimmed = k < p.length;
-    let j = Math.max(k, 1);
-    while (j < total - 1 && !numbers[solution[j]]) j++;
-    const end = Math.min(j, k + HINT_MAX_CELLS - 1);
+    // Like LinkedIn: reveal only the next correct move (from 1 when the path is empty).
+    const end = Math.min(total - 1, Math.max(k, 1));
     const base = solution.slice(0, k);
     commit(p, solution.slice(0, end + 1));
     setPath(base);
     onHint();
     setHint({
       text: trimmed
-        ? 'Your path took a wrong turn, so it was trimmed back. Here’s the next stretch of the path.'
-        : 'Here’s the next stretch of the path.',
+        ? 'Your path took a wrong turn, so it was trimmed back to the last correct cell. Here’s the next move.'
+        : 'Here’s the next move.',
     });
     setAnimating(true);
     for (let i = k; i <= end; i++) {

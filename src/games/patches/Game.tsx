@@ -23,6 +23,13 @@ function normRect(a: number, b: number, n: number): Rect {
   return { r0: Math.min(ar, br), c0: Math.min(ac, bc), r1: Math.max(ar, br), c1: Math.max(ac, bc) };
 }
 
+/** Grow a rectangle so it also covers `cell` (LinkedIn: every cell you drag through joins the patch). */
+function extendRect(r: Rect, cell: number, n: number): Rect {
+  const cr = Math.floor(cell / n);
+  const cc = cell % n;
+  return { r0: Math.min(r.r0, cr), c0: Math.min(r.c0, cc), r1: Math.max(r.r1, cr), c1: Math.max(r.c1, cc) };
+}
+
 function rectStyle(r: Rect, n: number): CSSProperties {
   const u = 100 / n;
   return {
@@ -48,7 +55,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const [fresh, setFresh] = useState<number | null>(null);
   const [won, setWon] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ pointerId: number; start: number; cur: number } | null>(null);
+  const drag = useRef<{ pointerId: number; start: number; cur: number; box: Rect } | null>(null);
   const readyRef = useRef(false);
   const completeRef = useRef(false);
   const timers = useRef<number[]>([]);
@@ -89,8 +96,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     return r * n + c;
   };
 
-  const updatePreview = (a: number, b: number) => {
-    const rect = normRect(a, b, n);
+  const updatePreview = (rect: Rect) => {
     const inside = cluesIn(rect);
     setPreview({ rect, clue: inside.length === 1 ? inside[0] : -1, bad: inside.length > 1 });
   };
@@ -103,13 +109,14 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     e.preventDefault();
     setHint(null);
     setFlash(null);
-    drag.current = { pointerId: e.pointerId, start: cell, cur: cell };
+    const box = normRect(cell, cell, n);
+    drag.current = { pointerId: e.pointerId, start: cell, cur: cell, box };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
       // ignore
     }
-    updatePreview(cell, cell);
+    updatePreview(box);
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -118,7 +125,8 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const cell = cellFromPoint(e.clientX, e.clientY, true);
     if (cell === d.cur) return;
     d.cur = cell;
-    updatePreview(d.start, cell);
+    d.box = extendRect(d.box, cell, n);
+    updatePreview(d.box);
   };
 
   const place = (rect: Rect, clue: number) => {
@@ -134,9 +142,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     drag.current = null;
     setPreview(null);
     if (locked) return;
-    const rect = normRect(d.start, d.cur, n);
+    const rect = d.box;
     const inside = cluesIn(rect);
-    if (d.start === d.cur) {
+    if (rect.r0 === rect.r1 && rect.c0 === rect.c1) {
       // Tap: remove the patch under the finger, or place a 1×1 patch where the clue allows it.
       const r = Math.floor(d.start / n);
       const c = d.start % n;
@@ -289,7 +297,14 @@ function ClueBadge({ clue, n }: { clue: Clue; n: number }) {
   return (
     <div className={styles.clueCell} style={rectStyle({ r0: clue.r, c0: clue.c, r1: clue.r, c1: clue.c }, n)} aria-label={`Clue: ${label}`}>
       <div className={`${styles.badge} ${shapeCls}${clue.shape === 'any' ? ` ${styles.bAny}` : ''}`} style={{ ['--pc' as string]: clue.color } as CSSProperties}>
-        {clue.size != null && <span>{clue.size}</span>}
+        {clue.size != null ? (
+          <span>{clue.size}</span>
+        ) : clue.shape === 'any' ? (
+          <svg className={styles.anyIcon} viewBox="0 0 24 24" aria-hidden>
+            <rect x="2.5" y="3" width="7.5" height="18" rx="1.8" />
+            <rect x="12.5" y="8" width="9" height="8" rx="1.8" />
+          </svg>
+        ) : null}
       </div>
     </div>
   );

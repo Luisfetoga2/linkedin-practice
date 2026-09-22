@@ -366,3 +366,10 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--error-text) 35%, transparent);
   }
 }
+
+/* Touch drags leave focus on the grip; the ring is only useful for keyboard users. */
+@media (pointer: coarse) {
+  .handle:focus-visible {
+    outline: none;
+  }
+}

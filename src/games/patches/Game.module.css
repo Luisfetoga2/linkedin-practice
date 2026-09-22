@@ -134,6 +134,15 @@
   outline: 2px dashed var(--pc);
   outline-offset: -2px;
 }
+/* Joker (any size, any shape): outline says "square", the icon adds wide + tall. */
+.anyIcon {
+  width: 70%;
+  height: 70%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
 
 /* ---------- Win ---------- */
 .won .patch {

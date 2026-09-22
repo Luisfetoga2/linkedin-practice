@@ -84,6 +84,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (locked || drag.current) return;
+    if (e.pointerType === 'mouse' && e.button === 2) {
+      // Right-click toggles a queen directly.
+      const i = cellFromPoint(e.clientX, e.clientY);
+      if (i < 0) return;
+      e.preventDefault();
+      setShowCursor(false);
+      setCursor(i);
+      act(i, boardRef.current.cells[i] === QUEEN ? EMPTY : QUEEN);
+      return;
+    }
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const i = cellFromPoint(e.clientX, e.clientY);
     if (i < 0) return;

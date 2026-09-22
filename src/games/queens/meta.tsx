@@ -40,7 +40,7 @@ export const meta: GameMeta = {
     <>
       <p>Your goal is to have exactly one 👑 in each row, column, and color region.</p>
       <ul>
-        <li>Tap once to place ✕ and tap twice for 👑. Use ✕ to mark where 👑 cannot be placed.</li>
+        <li>Tap once to place ✕ and tap twice for 👑. Use ✕ to mark where 👑 cannot be placed. Right-click places a 👑 directly.</li>
         <li>Two 👑 cannot touch each other, not even diagonally.</li>
         <li>Drag across cells to place several ✕ at once.</li>
       </ul>

@@ -72,9 +72,6 @@
   font-weight: 500;
 }
 
-.peer {
-  background: var(--cell-peer);
-}
 .same {
   background: var(--same-bg);
 }

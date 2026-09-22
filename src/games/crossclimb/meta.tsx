@@ -35,7 +35,7 @@ export const meta: GameMeta = {
     {
       key: 'links',
       label: 'Show matching neighbors',
-      description: 'Mark solved rows that already differ from the row below by one letter.',
+      description: 'While ordering, mark rows that already differ from the row below by one letter.',
       default: false,
     },
   ],
@@ -44,9 +44,10 @@ export const meta: GameMeta = {
       <p>Guess words from the clues, then order them into a word ladder.</p>
       <ul>
         <li>Answer the five middle clues in any order. Tap a row (or use the arrows on the clue card) to see its clue.</li>
+        <li>You won't be told whether a single answer is right. Once all five are correct, you'll be asked to put them in order.</li>
         <li>Drag the rows by the ≡ handle so each word differs from its neighbors by exactly one letter.</li>
         <li>Once the ladder is in order, the top and bottom rows unlock. Solve them to finish.</li>
-        <li>Stuck? A hint reveals a letter, or points out a row that is out of place.</li>
+        <li>Stuck? A hint reveals the next letter, tells you when a filled-in word isn't right, or points out a row that is out of place.</li>
       </ul>
     </>
   ),
