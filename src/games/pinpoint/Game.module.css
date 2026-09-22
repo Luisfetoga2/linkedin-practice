@@ -20,7 +20,6 @@
 .slot {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 /* Pinpoint blues, light → deep (dark mode: muted → vivid). */
@@ -137,53 +136,6 @@
   100% {
     transform: none;
     opacity: 1;
-  }
-}
-
-/* Guess / hint notes beneath the card they were made on */
-.note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 6px;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--text-2);
-  animation: noteIn 0.22s ease-out both;
-  min-width: 0;
-}
-.note > span,
-.note > s {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.noteWrong svg {
-  color: var(--error-text);
-  flex: none;
-}
-.noteWrong s {
-  text-decoration-thickness: 1.5px;
-  text-decoration-color: var(--text-3);
-}
-.noteHint {
-  color: var(--text-3);
-}
-.noteHint svg {
-  flex: none;
-  color: #b07d00;
-}
-.noteRight {
-  color: var(--success);
-  font-weight: 600;
-}
-.noteRight svg {
-  flex: none;
-}
-@keyframes noteIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
   }
 }
 
@@ -345,4 +297,200 @@
 .summaryWords {
   color: var(--text-2);
   font-size: 14px;
+}
+
+.summaryGuesses {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 14px;
+  color: var(--text-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.summaryGuess {
+  color: var(--text);
+}
+
+/* ---------- Guess list (below the input; never between the cards) ---------- */
+.guesses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+}
+.guessesDone {
+  margin-top: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  animation: noteIn 0.3s ease-out 0.5s both;
+}
+.guessesTitle {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.guessesDone .guessesTitle {
+  padding: 0;
+}
+.guessList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.guess {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 0 4px;
+  font-size: 15px;
+  line-height: 20px;
+  color: var(--text-2);
+  animation: noteIn 0.22s ease-out both;
+}
+.guessesDone .guess {
+  padding: 0;
+  min-height: 30px;
+}
+.guessIcon {
+  flex: none;
+  display: inline-flex;
+}
+.guessWrong .guessIcon {
+  color: var(--error-text);
+}
+.guessRight {
+  color: var(--success);
+  font-weight: 600;
+}
+.guessText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+s.guessText {
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--text-3);
+}
+.guessesDone .guessWrong .guessText {
+  color: var(--text);
+}
+@keyframes noteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Closeness: meter + % + temperature chip */
+.score {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  animation: noteIn 0.25s ease-out both;
+}
+.cold {
+  --heat: #4f8fe8;
+  --heat-ink: #1f5fb8;
+}
+.warm {
+  --heat: #f0a020;
+  --heat-ink: #9a5c00;
+}
+.hot {
+  --heat: #e8572a;
+  --heat-ink: #b3361a;
+}
+.correct {
+  --heat: var(--success);
+  --heat-ink: var(--success);
+}
+:global(:root[data-theme='dark']) .cold {
+  --heat-ink: #8dbcff;
+}
+:global(:root[data-theme='dark']) .warm {
+  --heat-ink: #ffc266;
+}
+:global(:root[data-theme='dark']) .hot {
+  --heat-ink: #ff9470;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .cold {
+    --heat-ink: #8dbcff;
+  }
+  :global(:root:not([data-theme='light'])) .warm {
+    --heat-ink: #ffc266;
+  }
+  :global(:root:not([data-theme='light'])) .hot {
+    --heat-ink: #ff9470;
+  }
+}
+.meter {
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.meterFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--heat);
+  transform-origin: left center;
+  animation: grow 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: inherit;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.pct {
+  min-width: 48px;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.temp {
+  width: 68px;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: var(--pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--heat-ink);
+  background: color-mix(in srgb, var(--heat) 16%, transparent);
+}
+@media (max-width: 380px) {
+  .meter {
+    width: 44px;
+  }
+  .score {
+    gap: 6px;
+  }
+  .temp {
+    width: 62px;
+    letter-spacing: 0.02em;
+  }
 }

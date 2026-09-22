@@ -69,7 +69,7 @@ export function ResultSheet({ open, meta, round, onClose, onPlayAgain }: { open:
           </div>
           <div className="lp-result-chips">
             {round.isBest && stats.played > 1 && <span className="lp-pill lp-pill-gold">Personal best</span>}
-            {result.won && <span className="lp-pill">{round.hints === 0 ? 'No hints' : `${round.hints} hint${round.hints > 1 ? 's' : ''}`}</span>}
+            {result.won && meta.hasHints !== false && <span className="lp-pill">{round.hints === 0 ? 'No hints' : `${round.hints} hint${round.hints > 1 ? 's' : ''}`}</span>}
             {diff !== null && Math.abs(diff) >= 1000 && (
               <span className={`lp-pill ${diff < 0 ? 'lp-pill-good' : ''}`}>
                 {formatTime(Math.abs(diff))} {diff < 0 ? 'faster' : 'slower'} than avg

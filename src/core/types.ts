@@ -31,6 +31,8 @@ export interface GameMeta {
   /** 'time' = ranked by solve time. 'guesses' = can be lost, ranked by guesses used. */
   scoring: 'time' | 'guesses';
   maxGuesses?: number;
+  /** False for games without hints (Pinpoint): hides hint badges in results. Defaults to true. */
+  hasHints?: boolean;
   howToPlay: ReactNode;
   options?: GameOption[];
   settings?: GameSettingDef[];

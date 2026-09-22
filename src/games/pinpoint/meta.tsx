@@ -21,6 +21,7 @@ export const meta: GameMeta = {
   tint: '#e0efff',
   scoring: 'guesses',
   maxGuesses: 5,
+  hasHints: false,
   Icon,
   howToPlay: (
     <>
@@ -29,7 +30,7 @@ export const meta: GameMeta = {
         <li>You start with one clue. Type the category and press Enter.</li>
         <li>Each wrong guess reveals the next clue. You have 5 guesses.</li>
         <li>Close answers count — “keys” works for <em>Things with keys</em>.</li>
-        <li>Stuck? <strong>Hint</strong> reveals the next clue, but it costs a guess.</li>
+        <li>When the round ends, see how close each of your guesses was to the category.</li>
       </ul>
     </>
   ),

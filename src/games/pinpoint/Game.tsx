@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { GameProps } from '../../core/types';
-import { ControlBar, ControlButton } from '../../core/components/Controls';
-import { Bulb, Check, Close } from '../../core/components/Icons';
+import { Check, Close } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
 import { CLUE_COUNT, displayWord, generatePuzzle } from './generator';
 import { clean, isMatch, isMeaningful } from './match';
+import { closeness, TEMP_LABEL, type Closeness } from './closeness';
+import { nearFor } from './near';
 import styles from './Game.module.css';
 
-type Attempt = { kind: 'guess'; text: string; correct: boolean } | { kind: 'hint' };
+interface Attempt {
+  text: string;
+  correct: boolean;
+}
 type Status = 'playing' | 'won' | 'lost';
 
 const MAX_GUESSES = CLUE_COUNT;
@@ -22,12 +26,14 @@ function Lock() {
   );
 }
 
-export default function Game({ seed, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
   const puzzle = useMemo(() => generatePuzzle(seed), [seed]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [status, setStatus] = useState<Status>('playing');
   const [text, setText] = useState('');
   const [shake, setShake] = useState(false);
+  /** Closeness of each guess, computed once the round ends. */
+  const [scores, setScores] = useState<Closeness[] | null>(null);
   /** Index of the first card revealed by the end-of-round cascade (for stagger delays). */
   const [cascadeFrom, setCascadeFrom] = useState(CLUE_COUNT);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,15 +58,21 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
   const used = attempts.length;
   const left = MAX_GUESSES - used;
 
+  const scoreAll = (list: Attempt[]): Closeness[] => {
+    const near = nearFor(puzzle.category.name);
+    return list.map((a) => closeness(a.text, puzzle.category, near));
+  };
+
   const finish = (next: Attempt[], won: boolean) => {
     if (doneRef.current) return;
     doneRef.current = true;
     setCascadeFrom(Math.min(CLUE_COUNT, 1 + next.length - (won ? 1 : 0)));
     setStatus(won ? 'won' : 'lost');
+    const sc = scoreAll(next);
+    setScores(sc);
     const squares = Array.from({ length: MAX_GUESSES }, (_, i) => {
       const a = next[i];
       if (!a) return '⬜';
-      if (a.kind === 'hint') return '💡';
       return a.correct ? '🟩' : '🟥';
     });
     onComplete({
@@ -73,6 +85,14 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
             {won ? 'Category' : 'The answer was'}: <strong>{puzzle.category.name}</strong>
           </p>
           <p className={styles.summaryWords}>{puzzle.clues.map(displayWord).join(' · ')}</p>
+          <ol className={styles.summaryGuesses} aria-label="How close your guesses were">
+            {next.map((a, i) => (
+              <li key={i}>
+                <span className={styles.summaryGuess}>{a.text}</span> —{' '}
+                <strong>{a.correct ? '✓' : `${sc[i].pct}%`}</strong>
+              </li>
+            ))}
+          </ol>
         </div>
       ),
     });
@@ -91,12 +111,12 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
       return;
     }
     const key = clean(guess);
-    if (attempts.some((a) => a.kind === 'guess' && clean(a.text) === key)) {
+    if (attempts.some((a) => clean(a.text) === key)) {
       toast('Already guessed');
       return;
     }
     const correct = isMatch(guess, puzzle.category);
-    const next: Attempt[] = [...attempts, { kind: 'guess', text: guess, correct }];
+    const next: Attempt[] = [...attempts, { text: guess, correct }];
     setAttempts(next);
     setText('');
     if (correct) {
@@ -110,12 +130,6 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
     }
   };
 
-  const hint = () => {
-    if (locked || revealed >= CLUE_COUNT) return;
-    onHint();
-    setAttempts((a) => [...a, { kind: 'hint' }]);
-  };
-
   // Keep the guess bar visible above the on-screen keyboard.
   const onFocus = () => {
     if (!window.matchMedia?.('(pointer: coarse)').matches) return;
@@ -127,7 +141,6 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
       <ol className={styles.stack} aria-label="Clues">
         {puzzle.clues.map((word, i) => {
           const open = i < revealed;
-          const a = attempts[i];
           const delay = done && i >= cascadeFrom ? (i - cascadeFrom) * CASCADE_MS : 0;
           return (
             <li key={i} className={styles.slot} style={{ ['--wave-delay' as string]: `${i * 70 + 380}ms` }}>
@@ -145,25 +158,6 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
                   </span>
                 )}
               </div>
-              {a && (
-                <div
-                  className={`${styles.note} ${a.kind === 'hint' ? styles.noteHint : a.correct ? styles.noteRight : styles.noteWrong}`}
-                >
-                  {a.kind === 'hint' ? (
-                    <>
-                      <Bulb size={14} /> <span>Hint used</span>
-                    </>
-                  ) : a.correct ? (
-                    <>
-                      <Check size={14} /> <span>{a.text}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Close size={14} /> <s>{a.text}</s>
-                    </>
-                  )}
-                </div>
-              )}
             </li>
           );
         })}
@@ -210,10 +204,30 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
         </form>
       )}
 
-      {!done && (
-        <ControlBar>
-          <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={hint} disabled={locked || revealed >= CLUE_COUNT} />
-        </ControlBar>
+      {attempts.length > 0 && (
+        <section className={`${styles.guesses}${scores ? ` ${styles.guessesDone}` : ''}`} aria-label="Your guesses">
+          <h2 className={styles.guessesTitle}>{scores ? 'How close you were' : 'Your guesses'}</h2>
+          <ol className={styles.guessList}>
+            {attempts.map((a, i) => {
+              const c = scores?.[i];
+              return (
+                <li key={i} className={`${styles.guess} ${a.correct ? styles.guessRight : styles.guessWrong}`}>
+                  <span className={styles.guessIcon}>{a.correct ? <Check size={14} /> : <Close size={14} />}</span>
+                  {c || a.correct ? <span className={styles.guessText}>{a.text}</span> : <s className={styles.guessText}>{a.text}</s>}
+                  {c && (
+                    <span className={`${styles.score} ${styles[c.temp]}`} style={{ animationDelay: `${600 + i * 90}ms` }}>
+                      <span className={styles.meter} aria-hidden>
+                        <span className={styles.meterFill} style={{ width: `${c.pct}%` }} />
+                      </span>
+                      <span className={styles.pct}>{c.pct}%</span>
+                      <span className={styles.temp}>{TEMP_LABEL[c.temp]}</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
       )}
     </div>
   );
