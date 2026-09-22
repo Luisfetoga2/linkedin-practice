@@ -91,7 +91,8 @@ function candidatesFor(n: number, clues: readonly Pick<Clue, 'r' | 'c' | 'size' 
       for (let c0 = k.c; c0 >= 0; c0--) {
         for (let c1 = k.c; c1 < n; c1++) {
           const rect = { r0, c0, r1, c1 };
-          if (!fitsClue(rect, k)) continue;
+          // LinkedIn has no 1-cell patches, so they're never a candidate.
+          if (rectArea(rect) < 2 || !fitsClue(rect, k)) continue;
           let ok = true;
           for (let r = r0; r <= r1 && ok; r++) {
             for (let c = c0; c <= c1; c++) {
@@ -276,7 +277,7 @@ function randomPartition(n: number, rng: Rng): Rect[] | null {
         if (!free) break;
         const a = w * h;
         if (a > conf.maxArea) continue;
-        let weight = a === 1 ? 0.02 : a <= 3 ? 0.8 : a <= 6 ? 1 : 0.6;
+        let weight = a === 1 ? 0.001 : a <= 3 ? 0.8 : a <= 6 ? 1 : 0.6;
         if (w === h && a > 1) weight *= 1.6;
         if (w > 4 || h > 4) weight *= 0.5;
         opts.push({ w, h, weight });
@@ -297,7 +298,7 @@ function randomPartition(n: number, rng: Rng): Rect[] | null {
     for (let y = rect.r0; y <= rect.r1; y++) for (let x = rect.c0; x <= rect.c1; x++) owner[y * n + x] = rects.length;
     rects.push(rect);
   }
-  if (ones > (n >= 7 ? 1 : 0)) return null;
+  if (ones > 0) return null;
   if (rects.length < conf.minPatches || rects.length > conf.maxPatches) return null;
   return rects;
 }

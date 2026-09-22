@@ -230,7 +230,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   });
 
   const conflicts = useMemo(() => (showErrors ? findConflicts(values) : new Set<number>()), [showErrors, values]);
-  const selDigit = selected !== null ? values[selected] : 0;
   const hintArea = useMemo(() => new Set(hint?.area ?? []), [hint]);
   const hintPattern = useMemo(() => new Set(hint?.pattern ?? []), [hint]);
   const digitCounts = useMemo(() => {
@@ -262,7 +261,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           else if (conflicts.has(i)) cls.push(styles.conflict);
           else if (hintPattern.has(i)) cls.push(styles.hintPattern);
           else if (hintArea.has(i)) cls.push(styles.hintArea);
-          else if (selDigit && v === selDigit) cls.push(styles.same);
           if (conflicts.has(i)) cls.push(styles.conflictText);
           if (hint?.mistake && hint.cell === i) cls.push(styles.mistake);
           const label = `Row ${r + 1}, column ${c + 1}: ${v || 'empty'}${locked[i] ? ', given' : ''}`;

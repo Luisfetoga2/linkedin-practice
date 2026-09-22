@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import type { GameProps } from '../../core/types';
@@ -24,6 +24,9 @@ interface Drag {
 
 const WAVE_STEP_MS = 45;
 
+/** Must match `.frame` border width in Game.module.css. */
+const FRAME_BORDER_PX = 3;
+
 export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
   const size = Math.min(10, Math.max(6, Number(options.size) || 8));
   const puzzle = useMemo(() => generate(seed, size), [seed, size]);
@@ -44,6 +47,23 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const [cursor, setCursor] = useState(0);
   const [showCursor, setShowCursor] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Board side in CSS px, snapped so each cell is a whole number of device pixels (keeps lines crisp).
+  const [boardPx, setBoardPx] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const avail = el.clientWidth - 2 * FRAME_BORDER_PX;
+      const cellDevice = Math.floor((avail * dpr) / n);
+      setBoardPx(cellDevice > 0 ? (cellDevice * n) / dpr : null);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [n]);
   const drag = useRef<Drag | null>(null);
   const readyRef = useRef(false);
   const doneRef = useRef(false);
@@ -257,12 +277,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const applyLabel = !hint ? '' : hint.action === 'cross' ? 'Place ✕' : hint.action === 'queen' ? 'Place queen' : 'Remove it';
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} ref={wrapRef}>
       <div className={`${styles.frame}${won ? ` ${styles.won}` : ''}`}>
         <div
           ref={gridRef}
           className={styles.grid}
-          style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${n}, minmax(0, 1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
+            ...(boardPx ? { width: boardPx, height: boardPx } : null),
+          }}
           role="grid"
           aria-label={`Queens ${n} by ${n} board`}
           tabIndex={0}

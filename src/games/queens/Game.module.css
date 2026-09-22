@@ -72,7 +72,9 @@
 }
 
 .frame {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   border: 3px solid var(--q-frame);
   border-radius: 8px;
   overflow: hidden;
@@ -132,12 +134,14 @@
   stroke: var(--q-thin);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
   fill: none;
 }
 .thick {
   stroke: var(--q-thick);
-  stroke-width: 2.75px;
+  stroke-width: 3px;
   stroke-linecap: square;
+  shape-rendering: crispEdges;
   vector-effect: non-scaling-stroke;
   fill: none;
 }

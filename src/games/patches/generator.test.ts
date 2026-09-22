@@ -12,6 +12,8 @@ function checkSolution(p: PatchesPuzzle) {
     for (let y = r.r0; y <= r.r1; y++) for (let x = r.c0; x <= r.c1; x++) cover[y * n + x]++;
   });
   expect(cover.every((v) => v === 1)).toBe(true);
+  // No 1-cell patches (LinkedIn never uses them).
+  p.solution.forEach((r) => expect((r.r1 - r.r0 + 1) * (r.c1 - r.c0 + 1)).toBeGreaterThan(1));
   // Each patch holds exactly its own clue and satisfies it.
   p.solution.forEach((r, i) => {
     const inside = p.clues.filter((k) => rectContains(r, k.r, k.c));

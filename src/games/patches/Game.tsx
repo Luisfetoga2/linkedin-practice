@@ -30,6 +30,29 @@ function extendRect(r: Rect, cell: number, n: number): Rect {
   return { r0: Math.min(r.r0, cr), c0: Math.min(r.c0, cc), r1: Math.max(r.r1, cr), c1: Math.max(r.c1, cc) };
 }
 
+const area = (r: Rect) => (r.r1 - r.r0 + 1) * (r.c1 - r.c0 + 1);
+
+/**
+ * LinkedIn lets you extend a patch by drawing an empty rectangle against it, as long as the
+ * two together make one rectangle (so the result still holds exactly one clue).
+ */
+function mergeTarget(patches: Patches, drawn: Rect, startCell: number, n: number): { rect: Rect; clue: number } | null {
+  const options: { rect: Rect; clue: number; nearStart: boolean }[] = [];
+  patches.forEach((p, clue) => {
+    if (!p) return;
+    const union = { r0: Math.min(p.r0, drawn.r0), c0: Math.min(p.c0, drawn.c0), r1: Math.max(p.r1, drawn.r1), c1: Math.max(p.c1, drawn.c1) };
+    const ov = { r0: Math.max(p.r0, drawn.r0), c0: Math.max(p.c0, drawn.c0), r1: Math.min(p.r1, drawn.r1), c1: Math.min(p.c1, drawn.c1) };
+    const overlap = ov.r0 <= ov.r1 && ov.c0 <= ov.c1 ? area(ov) : 0;
+    if (area(union) !== area(p) + area(drawn) - overlap) return;
+    const sr = Math.floor(startCell / n);
+    const sc = startCell % n;
+    const nearStart = sr >= p.r0 - 1 && sr <= p.r1 + 1 && sc >= p.c0 - 1 && sc <= p.c1 + 1;
+    options.push({ rect: union, clue, nearStart });
+  });
+  if (!options.length) return null;
+  return options.find((o) => o.nearStart) ?? options[0];
+}
+
 function rectStyle(r: Rect, n: number): CSSProperties {
   const u = 100 / n;
   return {
@@ -145,7 +168,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const rect = d.box;
     const inside = cluesIn(rect);
     if (rect.r0 === rect.r1 && rect.c0 === rect.c1) {
-      // Tap: remove the patch under the finger, or place a 1×1 patch where the clue allows it.
+      // Tap: remove the patch under the finger (there are no 1-cell patches).
       const r = Math.floor(d.start / n);
       const c = d.start % n;
       const at = patchesRef.current.findIndex((p) => p && rectContains(p, r, c));
@@ -153,10 +176,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         const next = patchesRef.current.slice();
         next[at] = null;
         commit(next);
-      } else if (inside.length === 1 && fitsClue(rect, clues[inside[0]])) {
-        place(rect, inside[0]);
       }
       return;
+    }
+    if (inside.length === 0) {
+      // An empty rectangle can grow an existing patch when together they form a rectangle.
+      const merge = mergeTarget(patchesRef.current, rect, d.start, n);
+      if (merge) {
+        place(merge.rect, merge.clue);
+        return;
+      }
     }
     if (inside.length !== 1) {
       setShake(rect);
