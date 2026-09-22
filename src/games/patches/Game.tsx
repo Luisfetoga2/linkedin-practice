@@ -5,9 +5,9 @@ import { ControlBar, ControlButton, HintBubble } from '../../core/components/Con
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
 import { fitsClue, generatePatches, logicSolve, rectContains, rectsOverlap, sameRect, type Clue, type Rect, type Reason } from './generator';
+import { resolveDraw, type Patches } from './draw';
 import styles from './Game.module.css';
 
-type Patches = (Rect | null)[];
 
 const REASON_TEXT: Record<Reason, string> = {
   only: 'This clue only fits in one place.',
@@ -28,29 +28,6 @@ function extendRect(r: Rect, cell: number, n: number): Rect {
   const cr = Math.floor(cell / n);
   const cc = cell % n;
   return { r0: Math.min(r.r0, cr), c0: Math.min(r.c0, cc), r1: Math.max(r.r1, cr), c1: Math.max(r.c1, cc) };
-}
-
-const area = (r: Rect) => (r.r1 - r.r0 + 1) * (r.c1 - r.c0 + 1);
-
-/**
- * LinkedIn lets you extend a patch by drawing an empty rectangle against it, as long as the
- * two together make one rectangle (so the result still holds exactly one clue).
- */
-function mergeTarget(patches: Patches, drawn: Rect, startCell: number, n: number): { rect: Rect; clue: number } | null {
-  const options: { rect: Rect; clue: number; nearStart: boolean }[] = [];
-  patches.forEach((p, clue) => {
-    if (!p) return;
-    const union = { r0: Math.min(p.r0, drawn.r0), c0: Math.min(p.c0, drawn.c0), r1: Math.max(p.r1, drawn.r1), c1: Math.max(p.c1, drawn.c1) };
-    const ov = { r0: Math.max(p.r0, drawn.r0), c0: Math.max(p.c0, drawn.c0), r1: Math.min(p.r1, drawn.r1), c1: Math.min(p.c1, drawn.c1) };
-    const overlap = ov.r0 <= ov.r1 && ov.c0 <= ov.c1 ? area(ov) : 0;
-    if (area(union) !== area(p) + area(drawn) - overlap) return;
-    const sr = Math.floor(startCell / n);
-    const sc = startCell % n;
-    const nearStart = sr >= p.r0 - 1 && sr <= p.r1 + 1 && sc >= p.c0 - 1 && sc <= p.c1 + 1;
-    options.push({ rect: union, clue, nearStart });
-  });
-  if (!options.length) return null;
-  return options.find((o) => o.nearStart) ?? options[0];
 }
 
 function rectStyle(r: Rect, n: number): CSSProperties {
@@ -105,7 +82,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
   const locked = paused || won;
 
-  const cluesIn = (r: Rect) => clues.map((k, i) => (rectContains(r, k.r, k.c) ? i : -1)).filter((i) => i >= 0);
 
   const cellFromPoint = (x: number, y: number, clamp: boolean): number => {
     const el = boardRef.current;
@@ -119,9 +95,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     return r * n + c;
   };
 
-  const updatePreview = (rect: Rect) => {
-    const inside = cluesIn(rect);
-    setPreview({ rect, clue: inside.length === 1 ? inside[0] : -1, bad: inside.length > 1 });
+  // The preview shows what releasing would produce (including extend/merge results).
+  const updatePreview = (box: Rect, start: number) => {
+    const out = resolveDraw(patchesRef.current, clues, box, start, n);
+    if (out.kind === 'place') setPreview({ rect: out.rect, clue: out.clue, bad: false });
+    else setPreview({ rect: box, clue: -1, bad: out.kind === 'multi' });
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -139,7 +117,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     } catch {
       // ignore
     }
-    updatePreview(box);
+    updatePreview(box, cell);
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -149,7 +127,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (cell === d.cur) return;
     d.cur = cell;
     d.box = extendRect(d.box, cell, n);
-    updatePreview(d.box);
+    updatePreview(d.box, d.start);
   };
 
   const place = (rect: Rect, clue: number) => {
@@ -166,7 +144,6 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setPreview(null);
     if (locked) return;
     const rect = d.box;
-    const inside = cluesIn(rect);
     if (rect.r0 === rect.r1 && rect.c0 === rect.c1) {
       // Tap: remove the patch under the finger (there are no 1-cell patches).
       const r = Math.floor(d.start / n);
@@ -179,21 +156,14 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       }
       return;
     }
-    if (inside.length === 0) {
-      // An empty rectangle can grow an existing patch when together they form a rectangle.
-      const merge = mergeTarget(patchesRef.current, rect, d.start, n);
-      if (merge) {
-        place(merge.rect, merge.clue);
-        return;
-      }
-    }
-    if (inside.length !== 1) {
+    const out = resolveDraw(patchesRef.current, clues, rect, d.start, n);
+    if (out.kind !== 'place') {
       setShake(rect);
       later(() => setShake(null), 450);
-      toast(inside.length === 0 ? 'A patch needs exactly one clue' : 'A patch can only hold one clue');
+      toast(out.kind === 'none' ? 'A patch needs exactly one clue' : 'A patch can only hold one clue');
       return;
     }
-    place(rect, inside[0]);
+    place(out.rect, out.clue);
   };
 
   const onPointerCancel = (e: ReactPointerEvent<HTMLDivElement>) => {

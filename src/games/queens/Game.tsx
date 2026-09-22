@@ -50,19 +50,38 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const wrapRef = useRef<HTMLDivElement>(null);
   // Board side in CSS px, snapped so each cell is a whole number of device pixels (keeps lines crisp).
   const [boardPx, setBoardPx] = useState<number | null>(null);
+  // Sub-pixel nudge so the grid's top-left corner also lands on a device pixel.
+  const [nudge, setNudge] = useState<[number, number]>([0, 0]);
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
+    let raf = 0;
+    const snapOrigin = () => {
+      const grid = gridRef.current;
+      if (!grid) return;
+      const dpr = window.devicePixelRatio || 1;
+      const r = grid.getBoundingClientRect();
+      setNudge(([nx, ny]) => {
+        const x = r.left - nx;
+        const y = r.top - ny;
+        return [(Math.round(x * dpr) - x * dpr) / dpr, (Math.round(y * dpr) - y * dpr) / dpr];
+      });
+    };
     const measure = () => {
       const dpr = window.devicePixelRatio || 1;
       const avail = el.clientWidth - 2 * FRAME_BORDER_PX;
       const cellDevice = Math.floor((avail * dpr) / n);
       setBoardPx(cellDevice > 0 ? (cellDevice * n) / dpr : null);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(snapOrigin);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [n]);
   const drag = useRef<Drag | null>(null);
   const readyRef = useRef(false);
@@ -278,7 +297,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
-      <div className={`${styles.frame}${won ? ` ${styles.won}` : ''}`}>
+      <div
+        className={`${styles.frame}${won ? ` ${styles.won}` : ''}`}
+        style={nudge[0] || nudge[1] ? { position: 'relative', left: nudge[0], top: nudge[1] } : undefined}
+      >
         <div
           ref={gridRef}
           className={styles.grid}

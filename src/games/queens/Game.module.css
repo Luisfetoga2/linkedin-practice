@@ -1,7 +1,7 @@
 .wrap {
-  --q-frame: #1f1f1f;
-  --q-thin: rgba(20, 20, 20, 0.42);
-  --q-thick: #1f1f1f;
+  --q-frame: #111;
+  --q-thin: rgba(0, 0, 0, 0.55);
+  --q-thick: #111;
   --q-ink: #1f1f1f;
   --q-x: rgba(0, 0, 0, 0.62);
   --q-clash: #d62d20;
@@ -29,7 +29,7 @@
 
 :global(:root[data-theme='dark']) .wrap {
   --q-frame: #0c0c0c;
-  --q-thin: rgba(0, 0, 0, 0.5);
+  --q-thin: rgba(0, 0, 0, 0.62);
   --q-thick: #0c0c0c;
   --q-ink: #141414;
   --q-x: rgba(0, 0, 0, 0.7);
@@ -51,7 +51,7 @@
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme='light'])) .wrap {
     --q-frame: #0c0c0c;
-    --q-thin: rgba(0, 0, 0, 0.5);
+    --q-thin: rgba(0, 0, 0, 0.62);
     --q-thick: #0c0c0c;
     --q-ink: #141414;
     --q-x: rgba(0, 0, 0, 0.7);
@@ -102,7 +102,6 @@
   min-width: 0;
   min-height: 0;
   background: var(--cell-color);
-  transition: filter 0.15s;
 }
 .r0 { --cell-color: var(--r0); }
 .r1 { --cell-color: var(--r1); }
@@ -116,8 +115,12 @@
 .r9 { --cell-color: var(--r9); }
 
 @media (hover: hover) {
-  .grid:not(:has(.dim)) .cell:hover {
-    filter: brightness(0.96);
+  .grid:not(:has(.dim)) .cell:hover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.05);
+    pointer-events: none;
   }
 }
 
@@ -235,7 +238,8 @@
 
 /* ---------- win wave ---------- */
 .won .cell {
-  animation: wave-cell 0.55s ease-out both;
+  /* backwards: no filter lingers on the cells after the wave (filters can soften rendering). */
+  animation: wave-cell 0.55s ease-out backwards;
   animation-delay: var(--d);
 }
 .won .queen {
