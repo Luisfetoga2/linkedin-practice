@@ -44,7 +44,7 @@ export const meta: GameMeta = {
       <p>Fill the 6×6 grid so that every row, column, and 2×3 box contains the numbers 1 through 6.</p>
       <ul>
         <li>Select a cell, then tap a number (or type 1–6).</li>
-        <li>Switch on Notes to pencil in candidates.</li>
+        <li>Switch on Notes (or press N) to pencil in candidates. Arrow keys move, Backspace erases.</li>
         <li>Every puzzle has exactly one solution.</li>
       </ul>
     </>

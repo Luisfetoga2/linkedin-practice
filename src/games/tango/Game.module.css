@@ -1,0 +1,231 @@
+.wrap {
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Artwork colours (sun / moon) */
+  --sun-fill: #ffb02e;
+  --sun-ring: #e8890c;
+  --moon-fill: #4a8bf5;
+  --sign-color: #5e5e5e;
+  --hint-ring: #0a66c2;
+}
+
+:global(:root[data-theme='dark']) .wrap {
+  --sun-fill: #ffb83f;
+  --sun-ring: #f09a24;
+  --moon-fill: #6aa2ff;
+  --sign-color: #c9c9c9;
+  --hint-ring: #71b7fb;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .wrap {
+    --sun-fill: #ffb83f;
+    --sun-ring: #f09a24;
+    --moon-fill: #6aa2ff;
+    --sign-color: #c9c9c9;
+    --hint-ring: #71b7fb;
+  }
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px solid var(--board-frame);
+  background: var(--grid-line);
+  overflow: hidden;
+  container-type: inline-size;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--cell-bg);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s, opacity 0.2s;
+}
+.cell.given {
+  background: var(--cell-given);
+  cursor: default;
+}
+
+.sym {
+  width: 58%;
+  height: 58%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.sym svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pop {
+  animation: pop 0.22s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.ghost {
+  opacity: 0.3;
+  animation: ghost 1.4s ease-in-out infinite;
+}
+@keyframes ghost {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.sun circle {
+  fill: var(--sun-fill);
+  stroke: var(--sun-ring);
+  stroke-width: 3;
+}
+.moon path {
+  fill: var(--moon-fill);
+}
+
+/* = / × glyphs centered on the shared edge */
+.sign {
+  position: absolute;
+  z-index: 2;
+  width: clamp(15px, 4.6cqw, 22px);
+  height: clamp(15px, 4.6cqw, 22px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--cell-bg);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.sign svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--sign-color);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* Rule violations */
+.error {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--error-stripe) 0,
+    var(--error-stripe) 4px,
+    transparent 4px,
+    transparent 9px
+  );
+}
+
+/* Keyboard cursor */
+.cursor {
+  box-shadow: inset 0 0 0 2px var(--text-2);
+}
+
+/* Hints */
+.hinting .dim {
+  opacity: 0.45;
+}
+.hintTarget {
+  z-index: 1;
+  box-shadow: inset 0 0 0 3px var(--hint-ring);
+}
+.hintRelated {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--hint-ring) 55%, transparent);
+}
+.hintMistake {
+  z-index: 1;
+  box-shadow: inset 0 0 0 3px var(--error-text);
+  animation: shake 0.35s ease-in-out;
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* Win ripple */
+.won .cell {
+  animation: ripple 0.55s ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+.won .sign {
+  transition: opacity 0.3s;
+}
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.86);
+    filter: brightness(1.08);
+  }
+  70% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Rule message under the board (height reserved to avoid layout jumps) */
+.message {
+  min-height: 22px;
+  display: flex;
+  justify-content: center;
+  margin-top: -2px;
+}
+.messageText {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  animation: rise 0.2s ease-out;
+}
+.messageText svg {
+  color: var(--error-text);
+  flex: none;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

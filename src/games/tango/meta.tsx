@@ -48,6 +48,7 @@ export const meta: GameMeta = {
         <li>Cells separated by an <strong>×</strong> sign must be the opposite type.</li>
         <li>Each puzzle has one right answer and can be solved via deduction — no guessing needed.</li>
       </ul>
+      <p>Tap a cell once for a ☀️, twice for a 🌙, and a third time to clear it. On a keyboard, use the arrow keys and Space.</p>
     </>
   ),
 };

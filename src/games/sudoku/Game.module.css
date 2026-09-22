@@ -1,0 +1,199 @@
+.wrap {
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  --same-bg: color-mix(in srgb, var(--cell-select) 55%, var(--cell-bg));
+  --hint-area: color-mix(in srgb, #f5c542 22%, var(--cell-bg));
+  --hint-pattern: color-mix(in srgb, #f5c542 45%, var(--cell-bg));
+}
+
+/* Four controls must fit on a 360px phone. */
+.wrap :global(.lp-control) {
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid var(--board-frame);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--cell-bg);
+  container-type: inline-size;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--grid-line);
+  border-bottom: 1px solid var(--grid-line);
+  border-radius: 0;
+  background: var(--cell-bg);
+  color: var(--cell-text);
+  font-size: 8.2cqw;
+  line-height: 1;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.12s;
+}
+.boxRight {
+  border-right: 2px solid var(--grid-line-strong);
+}
+.boxBottom {
+  border-bottom: 2px solid var(--grid-line-strong);
+}
+.lastCol {
+  border-right: 0;
+}
+.lastRow {
+  border-bottom: 0;
+}
+
+.given {
+  background: var(--cell-given);
+  font-weight: 700;
+}
+.player {
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.peer {
+  background: var(--cell-peer);
+}
+.same {
+  background: var(--same-bg);
+}
+.selected {
+  background: var(--cell-select);
+}
+.hintArea {
+  background: var(--hint-area);
+}
+.hintPattern {
+  background: var(--hint-pattern);
+}
+.conflict {
+  background: var(--danger-soft);
+}
+.conflictText.player {
+  color: var(--error-text);
+}
+.mistake {
+  animation: shake 0.35s ease-in-out;
+}
+.mistake .digit {
+  color: var(--error-text);
+}
+
+.digit {
+  display: block;
+}
+.pop {
+  animation: pop 0.2s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+@keyframes pop {
+  from {
+    transform: scale(0.5);
+    opacity: 0.3;
+  }
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.notes {
+  position: absolute;
+  inset: 6%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  place-items: center;
+  font-size: 3.3cqw;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* Win wave */
+.won .cell {
+  animation: wave 0.6s ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes wave {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-8%) scale(0.94);
+    background: var(--success-soft);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Number pad */
+.pad {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.key {
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  transition: background-color 0.12s, transform 0.08s;
+  touch-action: manipulation;
+}
+.key:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.key:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.key:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.keyDone {
+  color: var(--text-3);
+}
+.keyNotes {
+  font-size: 16px;
+  color: var(--text-2);
+}
+
+@media (max-width: 400px) {
+  .pad {
+    gap: 6px;
+  }
+  .key {
+    height: 48px;
+    font-size: 20px;
+  }
+}
