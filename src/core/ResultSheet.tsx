@@ -54,7 +54,7 @@ export function ResultSheet({ open, meta, round, onClose, onPlayAgain }: { open:
 
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="lp-result">
+      <div className="lp-result" style={{ '--game-color': meta.color, '--game-tint': meta.tint } as React.CSSProperties}>
         <div className="lp-result-hero">
           <div className="lp-result-icon">
             <meta.Icon size={48} />

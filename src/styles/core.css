@@ -301,7 +301,7 @@
 .lp-control {
   flex: 1 1 0;
   max-width: 160px;
-  min-width: 84px;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -730,5 +730,16 @@
   }
   .lp-stat-value {
     font-size: 17px;
+  }
+}
+
+:root[data-theme='dark'] .lp-toast {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .lp-toast {
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
   }
 }
