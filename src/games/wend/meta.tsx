@@ -48,6 +48,8 @@ export const meta: GameMeta = {
         <li>Words bend around the gray walls.</li>
         <li>Every letter is used by exactly one word, so a real word in the wrong place can block the rest.</li>
         <li>The slots below the grid show how long each hidden word is.</li>
+        <li>Drag or tap tile by tile (tap the last tile again to submit). On a keyboard, type letters or use the arrows, then Enter.</li>
+        <li>Stuck? Undo removes your last word, and Hint reveals the next letter of a word you're looking for.</li>
       </ul>
     </>
   ),
