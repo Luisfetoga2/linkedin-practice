@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { GameId } from '../core/types';
 import { readJSON, subscribeKey, writeJSON, removeKey } from './storage';
 import { addDays, dayKey } from './time';
@@ -135,16 +135,28 @@ export function computeStats(history: PlayRecord[], variant?: string, now = Date
   };
 }
 
-/** Days on which any game was won, across all games. */
-export function allWinDays(games: GameId[]): Map<string, number> {
-  const days = new Map<string, number>();
-  for (const g of games) for (const r of loadHistory(g)) if (r.won) days.set(dayKey(r.at), (days.get(dayKey(r.at)) ?? 0) + 1);
-  return days;
-}
-
 export function variantKey(options: Record<string, string>): string {
   return Object.keys(options)
     .sort()
     .map((k) => `${k}=${options[k]}`)
     .join('&');
+}
+
+/** Histories for several games at once; re-renders when any of them changes. */
+export function useAllHistories(games: GameId[]): Record<string, PlayRecord[]> {
+  const read = () => Object.fromEntries(games.map((g) => [g, loadHistory(g)]));
+  const [all, setAll] = useState(read);
+  useEffect(() => {
+    const unsubs = games.map((g) => subscribeKey(key(g), () => setAll(read())));
+    return () => unsubs.forEach((u) => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games.join(',')]);
+  return all;
+}
+
+export function winDaysFrom(histories: Record<string, PlayRecord[]>): Map<string, number> {
+  const days = new Map<string, number>();
+  for (const list of Object.values(histories))
+    for (const r of list) if (r.won) days.set(dayKey(r.at), (days.get(dayKey(r.at)) ?? 0) + 1);
+  return days;
 }
