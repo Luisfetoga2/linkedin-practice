@@ -91,28 +91,6 @@
   border: 2px dashed var(--pc, var(--text-2));
   background: color-mix(in srgb, var(--pc, var(--text-3)) 12%, transparent);
 }
-/* Live size readout while drawing (width×height · cells). */
-.previewSize {
-  position: absolute;
-  right: 9px;
-  bottom: 7px;
-  z-index: 2;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.previewSize small {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-2);
-}
 .previewBad::before {
   border-color: var(--error-text);
   background: var(--error-stripe);

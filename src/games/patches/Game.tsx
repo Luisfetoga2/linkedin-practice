@@ -5,7 +5,7 @@ import { ControlBar, ControlButton, HintBubble } from '../../core/components/Con
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
 import { fitsClue, generatePatches, logicSolve, rectContains, rectsOverlap, sameRect, type Clue, type Rect, type Reason } from './generator';
-import { resolveDraw, type Patches } from './draw';
+import { patchAt, resolveNew, resolveResize, type DrawOutcome, type Patches } from './draw';
 import styles from './Game.module.css';
 
 
@@ -55,7 +55,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const [fresh, setFresh] = useState<number | null>(null);
   const [won, setWon] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ pointerId: number; start: number; cur: number; box: Rect } | null>(null);
+  /** `resize` = the drag started on patch `clue` (LinkedIn resize); otherwise a new rectangle. */
+  const drag = useRef<{
+    pointerId: number;
+    start: number;
+    cur: number;
+    box: Rect;
+    moved: boolean;
+    resize: { clue: number; base: Rect } | null;
+  } | null>(null);
+  const [resizing, setResizing] = useState<number | null>(null);
   const readyRef = useRef(false);
   const completeRef = useRef(false);
   const timers = useRef<number[]>([]);
@@ -121,16 +130,23 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // The preview shows what releasing would produce (including extend/merge results).
-  const updatePreview = (box: Rect, start: number) => {
-    const out = resolveDraw(patchesRef.current, clues, box, start, n);
+  const outcomeOf = (d: NonNullable<typeof drag.current>): DrawOutcome =>
+    d.resize ? resolveResize(clues, d.resize.base, d.resize.clue, d.cur, n) : resolveNew(clues, d.box);
+
+  /** Shows what releasing would produce; a resized patch shows its new size in its own color. */
+  const updatePreview = (d: NonNullable<typeof drag.current>) => {
+    const out = outcomeOf(d);
     if (out.kind === 'place') setPreview({ rect: out.rect, clue: out.clue, bad: false });
-    else setPreview({ rect: box, clue: -1, bad: out.kind === 'multi' });
+    else if (d.resize) setPreview({ rect: extendTo(d.resize.base, d.cur), clue: d.resize.clue, bad: true });
+    else setPreview({ rect: d.box, clue: -1, bad: out.kind === 'multi' });
   };
+
+  const extendTo = (base: Rect, cell: number): Rect => extendRect(base, cell, n);
 
   const cancelDrag = () => {
     drag.current = null;
     setPreview(null);
+    setResizing(null);
   };
 
   const removeAt = (cell: number) => {
@@ -163,13 +179,23 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setHint(null);
     setFlash(null);
     const box = normRect(cell, cell, n);
-    drag.current = { pointerId: e.pointerId, start: cell, cur: cell, box };
+    const on = patchAt(patchesRef.current, cell, n);
+    const d = {
+      pointerId: e.pointerId,
+      start: cell,
+      cur: cell,
+      box,
+      moved: false,
+      resize: on >= 0 ? { clue: on, base: patchesRef.current[on]! } : null,
+    };
+    drag.current = d;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
       // ignore
     }
-    updatePreview(box, cell);
+    // Resizes show nothing until the pointer leaves the start cell (a plain tap removes the patch).
+    if (!d.resize) updatePreview(d);
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -178,8 +204,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const cell = cellFromPoint(e.clientX, e.clientY, true);
     if (cell === d.cur) return;
     d.cur = cell;
+    d.moved = true;
     d.box = extendRect(d.box, cell, n);
-    updatePreview(d.box, d.start);
+    if (d.resize) setResizing(d.resize.clue);
+    updatePreview(d);
   };
 
   const place = (rect: Rect, clue: number) => {
@@ -194,21 +222,23 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (!d || d.pointerId !== e.pointerId) return;
     drag.current = null;
     setPreview(null);
+    setResizing(null);
     if (locked) return;
-    const rect = d.box;
-    if (rect.r0 === rect.r1 && rect.c0 === rect.c1) {
+    if (!d.moved) {
       // Tap: remove the patch under the finger (there are no 1-cell patches).
       removeAt(d.start);
       return;
     }
     if (releasedOffBoard(e.clientX, e.clientY)) return; // drag off the board to cancel
-    const out = resolveDraw(patchesRef.current, clues, rect, d.start, n);
+    const out = outcomeOf(d);
     if (out.kind !== 'place') {
+      const rect = d.resize ? extendTo(d.resize.base, d.cur) : d.box;
       setShake(rect);
       later(() => setShake(null), 450);
       toast(out.kind === 'none' ? 'A patch needs exactly one clue' : 'A patch can only hold one clue');
       return;
     }
+    if (d.resize && sameRect(out.rect, d.resize.base)) return; // dragged back inside: no change
     place(out.rect, out.clue);
   };
 
@@ -298,7 +328,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         <div className={styles.grid}>{cells}</div>
         <div className={styles.layer}>
           {patches.map((p, i) => {
-            if (!p) return null;
+            if (!p || i === resizing) return null;
             const ok = fitsClue(p, clues[i]);
             const cls = [
               styles.patch,
@@ -320,14 +350,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             <div
               className={`${styles.preview}${preview.bad ? ` ${styles.previewBad}` : ''}`}
               style={{ ...rectStyle(preview.rect, n), ...(preview.clue >= 0 ? tint(clues[preview.clue].color) : {}) }}
-            >
-              {(preview.rect.r1 > preview.rect.r0 || preview.rect.c1 > preview.rect.c0) && (
-                <span className={styles.previewSize}>
-                  {preview.rect.c1 - preview.rect.c0 + 1}×{preview.rect.r1 - preview.rect.r0 + 1}
-                  <small> · {(preview.rect.c1 - preview.rect.c0 + 1) * (preview.rect.r1 - preview.rect.r0 + 1)}</small>
-                </span>
-              )}
-            </div>
+            />
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
           {clues.map((k, i) => (
