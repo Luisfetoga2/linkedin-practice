@@ -40,3 +40,9 @@ src/
 - **Game contract** (`src/core/types.ts`): each game gets `seed` and `options`, and calls `onReady()`, `onHint()`, and `onComplete(result)`. The shell owns the timer, stats, streaks, and results screen, so adding a game means adding a folder and one line in `src/games/registry.ts`.
 - **Determinism**: generators use only the seeded RNG, so the same seed always produces the same puzzle.
 - **Code splitting**: each game, including its word lists, loads only when you open it.
+
+## Credits
+
+- Wordle word lists are derived from [SCOWL](http://wordlist.aspell.net/) (Kevin Atkinson, MIT-like license).
+- Wend word lists are derived from [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0), filtered against the public-domain Webster's 2nd dictionary (`/usr/share/dict/words`).
+- The Crossclimb clues and Pinpoint categories were written for this project.
