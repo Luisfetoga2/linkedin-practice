@@ -1,0 +1,134 @@
+.wrap {
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--cell-bg);
+  box-shadow: 0 0 0 3px var(--board-frame);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  font-weight: 600;
+  cursor: default;
+  box-shadow: 0 0 0 3px var(--grid-line);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.grid {
+  fill: none;
+  stroke: var(--grid-line);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.tint {
+  opacity: 0.2;
+}
+
+.seg {
+  stroke-width: 42px;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.wall {
+  stroke: var(--board-frame);
+  stroke-width: 9px;
+  stroke-linecap: round;
+}
+
+.dotBg {
+  fill: var(--cell-text);
+}
+
+.dotText {
+  fill: var(--cell-bg);
+  font-size: 38px;
+  font-weight: 700;
+  font-family: var(--font);
+  pointer-events: none;
+}
+
+.head {
+  fill: #fff;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* ---------- Win celebration: a pulse travelling along the path ---------- */
+.won .seg {
+  animation: segPulse 0.55s ease-in-out both;
+}
+.won .tint {
+  animation: tintFlash 0.7s ease-out both;
+}
+.won {
+  animation: boardGlow 1.2s ease-out;
+}
+
+@keyframes segPulse {
+  0% {
+    stroke-width: 42px;
+  }
+  45% {
+    stroke-width: 58px;
+  }
+  100% {
+    stroke-width: 42px;
+  }
+}
+
+@keyframes tintFlash {
+  0% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes boardGlow {
+  0% {
+    box-shadow: 0 0 0 3px var(--board-frame), 0 0 0 0 rgba(255, 122, 46, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--board-frame), 0 0 24px 6px rgba(242, 69, 154, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 3px var(--board-frame), 0 0 0 0 rgba(242, 69, 154, 0);
+  }
+}
+
+:global(:root[data-theme='dark']) .tint {
+  opacity: 0.24;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .tint {
+    opacity: 0.24;
+  }
+}
