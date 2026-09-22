@@ -41,6 +41,7 @@ export const meta: GameMeta = {
           <strong>Gray</strong> means the letter is not in the word.
         </li>
       </ul>
+      <p>Stuck? Tap Hint (up to 2 per round) to reveal one letter in its correct spot.</p>
     </>
   ),
 };

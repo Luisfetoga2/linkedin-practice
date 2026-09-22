@@ -1,0 +1,302 @@
+/* Wordle play area: 6x5 grid, hint row, on-screen keyboard. */
+.root {
+  --w-correct: #6aaa64;
+  --w-present: #c9b458;
+  --w-absent: #787c7e;
+  --w-filled: #878a8c;
+  --w-key: #d3d6da;
+  --w-key-text: #1a1a1b;
+  --w-on-mark: #ffffff;
+  --w-tile-bg: var(--cell-bg);
+
+  --vh: 100vh;
+  --gap: 5px;
+  --kb-h: clamp(40px, 6.8vh, 58px);
+  /* Everything above/around us: topbar 52 + play padding 12 + play bar 34 + gap 12 + slack. */
+  --chrome: 128px;
+  /* Hint row (40) + two 12px gaps + keyboard (3 rows + 2x8 gaps). */
+  --below: calc(40px + 24px + 3 * var(--kb-h) + 16px);
+  --tile-by-h: calc((var(--vh) - var(--chrome) - var(--below) - 5 * var(--gap)) / 6);
+  --tile-by-w: calc((100vw - 24px - 4 * var(--gap)) / 5);
+  --tile: clamp(32px, min(62px, var(--tile-by-w), var(--tile-by-h)), 62px);
+
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@supports (height: 100dvh) {
+  .root {
+    --vh: 100dvh;
+    --kb-h: clamp(40px, 6.8dvh, 58px);
+  }
+}
+
+:global(:root[data-theme='dark']) .root {
+  --w-correct: #538d4e;
+  --w-present: #b59f3b;
+  --w-absent: #3a3a3c;
+  --w-filled: #565758;
+  --w-key: #818384;
+  --w-key-text: #ffffff;
+  --w-tile-bg: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .root {
+    --w-correct: #538d4e;
+    --w-present: #b59f3b;
+    --w-absent: #3a3a3c;
+    --w-filled: #565758;
+    --w-key: #818384;
+    --w-key-text: #ffffff;
+    --w-tile-bg: transparent;
+  }
+}
+/* Set on the children so it wins over the dark-mode overrides on .root. */
+.hc > * {
+  --w-correct: #f5793a;
+  --w-present: #85c0f9;
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid;
+  grid-template-rows: repeat(6, var(--tile));
+  gap: var(--gap);
+}
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, var(--tile));
+  gap: var(--gap);
+}
+.tile {
+  --mark-bg: var(--w-absent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tile);
+  height: var(--tile);
+  border: 2px solid var(--grid-line);
+  background: var(--w-tile-bg);
+  color: var(--cell-text);
+  font-size: calc(var(--tile) * 0.53);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.tile[data-mark='correct'] {
+  --mark-bg: var(--w-correct);
+}
+.tile[data-mark='present'] {
+  --mark-bg: var(--w-present);
+}
+.filled {
+  border-color: var(--w-filled);
+  animation: pop 100ms ease-out;
+}
+.revealed {
+  background: var(--mark-bg);
+  border-color: var(--mark-bg);
+  color: var(--w-on-mark);
+  animation: none;
+}
+.revealed.flip {
+  animation: flip 500ms ease-in-out both;
+  animation-delay: calc(var(--i) * 250ms);
+}
+.revealed.bounce {
+  animation: bounce 1000ms ease both;
+  animation-delay: calc(var(--i) * 100ms);
+}
+.ghost {
+  color: color-mix(in srgb, var(--w-correct) 60%, transparent);
+}
+.shake {
+  animation: shake 600ms ease;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes flip {
+  0% {
+    transform: rotateX(0);
+    background: var(--w-tile-bg);
+    border-color: var(--w-filled);
+    color: var(--cell-text);
+  }
+  49.9% {
+    transform: rotateX(-90deg);
+    background: var(--w-tile-bg);
+    border-color: var(--w-filled);
+    color: var(--cell-text);
+  }
+  50% {
+    transform: rotateX(-90deg);
+    background: var(--mark-bg);
+    border-color: var(--mark-bg);
+    color: var(--w-on-mark);
+  }
+  100% {
+    transform: rotateX(0);
+    background: var(--mark-bg);
+    border-color: var(--mark-bg);
+    color: var(--w-on-mark);
+  }
+}
+@keyframes bounce {
+  0%,
+  20% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-30px);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+  60% {
+    transform: translateY(-15px);
+  }
+  80% {
+    transform: translateY(2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+/* ---------- Hints ---------- */
+.hintRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 40px;
+  width: 100%;
+}
+.hintRow > button {
+  flex: 0 0 auto;
+}
+.hintPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 9px 0 4px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: pop 180ms ease-out;
+}
+.hintTile {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--w-correct);
+  color: var(--w-on-mark);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+/* ---------- Keyboard ---------- */
+.keyboard {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.keyRow {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.half {
+  flex: 0.5 1 0;
+}
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--kb-h);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--w-key);
+  color: var(--w-key-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  transition: background-color 0.15s, filter 0.1s;
+}
+.key:active {
+  filter: brightness(0.88);
+}
+.wide {
+  flex: 1.5 1 0;
+  font-size: 12px;
+}
+.key[data-mark] {
+  color: var(--w-on-mark);
+}
+.key[data-mark='correct'] {
+  background: var(--w-correct);
+}
+.key[data-mark='present'] {
+  background: var(--w-present);
+}
+.key[data-mark='absent'] {
+  background: var(--w-absent);
+}
+
+@media (min-width: 480px) {
+  .key {
+    font-size: 14px;
+  }
+  .keyRow {
+    gap: 7px;
+  }
+}
