@@ -11,6 +11,7 @@ Live site: https://luisfetoga2.github.io/linkedin-practice/
 
 - Unlimited, seeded puzzles. Every puzzle has a code, so you can replay or share it (`#/queens?s=K3F9A&size=8`).
 - LinkedIn-style layout on desktop and mobile, with light and dark themes.
+- English and Latin American Spanish interface (Settings → Language). Wordle and Wend also have Spanish word lists.
 - The same hints as the originals, plus undo and clear. Hint usage is tracked.
 - A timer that pauses automatically when you switch tabs, with a manual pause.
 - Per-game and overall daily streaks, win streaks, and best, average, median, and last-10 times.
@@ -45,4 +46,5 @@ src/
 
 - Wordle word lists are derived from [SCOWL](http://wordlist.aspell.net/) (Kevin Atkinson, MIT-like license).
 - Wend word lists are derived from [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0), filtered against the public-domain Webster's 2nd dictionary (`/usr/share/dict/words`).
-- The Crossclimb clues and Pinpoint categories were written for this project.
+- Spanish word lists (Wordle and Wend) are derived from [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) `es` (CC BY-SA 4.0) and the LibreOffice / RLA-ES Spanish spell-check dictionaries (used under MPL 1.1).
+- The Crossclimb clues, Pinpoint categories and Nonogram pictures were written for this project.

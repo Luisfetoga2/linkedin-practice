@@ -1,11 +1,24 @@
 import { createRng } from '../../lib/rng';
 import { ANSWERS_RAW, EXTRA_GUESSES_RAW } from './words';
+import { STR, type WordleStrings } from './i18n';
 
 export const WORD_LEN = 5;
 export const MAX_GUESSES = 6;
 export const MAX_HINTS = 2;
 
 export type Mark = 'correct' | 'present' | 'absent';
+/** Language of the word list (the `words` option), independent of the interface language. */
+export type WordLang = 'en' | 'es';
+
+export interface WordList {
+  lang: WordLang;
+  /** Curated answers, normalized (lowercase, no accents, Ñ kept), in a fixed order. */
+  answers: readonly string[];
+  /** Every accepted guess, normalized. */
+  valid: ReadonlySet<string>;
+  /** Accented spelling of an answer for display (e.g. "arbol" -> "árbol"); absent when identical. */
+  display: ReadonlyMap<string, string>;
+}
 
 function split(raw: string): string[] {
   const out: string[] = new Array(raw.length / WORD_LEN);
@@ -13,23 +26,89 @@ function split(raw: string): string[] {
   return out;
 }
 
-/** Curated answer list (lowercase, sorted). */
+const BASE: Record<string, string> = {
+  á: 'a', à: 'a', â: 'a', ä: 'a',
+  é: 'e', è: 'e', ê: 'e', ë: 'e',
+  í: 'i', ì: 'i', î: 'i', ï: 'i',
+  ó: 'o', ò: 'o', ô: 'o', ö: 'o',
+  ú: 'u', ù: 'u', û: 'u', ü: 'u',
+};
+
+/**
+ * Canonical form used to store and compare words: lowercase, accents and diaeresis removed
+ * (á→a … ü→u), but Ñ kept as its own letter. Rendered uppercase on screen.
+ */
+export function normalizeWord(s: string): string {
+  const lower = s.normalize('NFC').toLowerCase();
+  let out = '';
+  for (const ch of lower) out += BASE[ch] ?? ch;
+  return out;
+}
+
+/** Letters a physical key may type for this list, or null ("Á" → "a"; "ñ" only for Spanish). */
+export function keyToLetter(key: string, lang: WordLang): string | null {
+  if (key.length !== 1) return null;
+  const ch = normalizeWord(key);
+  if (/^[a-z]$/.test(ch)) return ch;
+  if (ch === 'ñ' && lang === 'es') return ch;
+  return null;
+}
+
+/** Curated English answer list (lowercase, sorted). */
 export const ANSWERS: readonly string[] = split(ANSWERS_RAW);
 
 let validSet: Set<string> | null = null;
-/** Every accepted guess: answers + the broad extra list. */
+/** Every accepted English guess: answers + the broad extra list. */
 export function validGuesses(): Set<string> {
   if (!validSet) validSet = new Set([...ANSWERS, ...split(EXTRA_GUESSES_RAW)]);
   return validSet;
 }
 
-export function isValidGuess(word: string): boolean {
-  return validGuesses().has(word.toLowerCase());
+let englishList: WordList | null = null;
+export function englishWords(): WordList {
+  if (!englishList) englishList = { lang: 'en', answers: ANSWERS, valid: validGuesses(), display: new Map() };
+  return englishList;
 }
 
-/** Deterministic answer for a seed (lowercase). */
-export function pickAnswer(seed: number): string {
-  return createRng(seed).pick(ANSWERS);
+/** Build a list from raw concatenated data (answers may carry accents; extras are normalized). */
+export function buildWordList(lang: WordLang, answersRaw: string, extraRaw: string): WordList {
+  const display = new Map<string, string>();
+  const answers = split(answersRaw).map((w) => {
+    const n = normalizeWord(w);
+    if (n !== w) display.set(n, w);
+    return n;
+  });
+  return { lang, answers, valid: new Set([...answers, ...split(extraRaw)]), display };
+}
+
+let spanish: Promise<WordList> | null = null;
+/**
+ * Word list for a language. English is bundled; Spanish lives in its own chunk and is only
+ * downloaded when a Spanish round starts.
+ */
+export function loadWordList(lang: WordLang): Promise<WordList> {
+  if (lang === 'en') return Promise.resolve(englishWords());
+  if (!spanish) {
+    spanish = import('./words-es').then((m) => buildWordList('es', m.ES_ANSWERS_RAW, m.ES_EXTRA_RAW));
+    spanish.catch(() => {
+      spanish = null; // allow a retry after a network error
+    });
+  }
+  return spanish;
+}
+
+export function isValidGuess(word: string, list: WordList = englishWords()): boolean {
+  return list.valid.has(normalizeWord(word));
+}
+
+/** Deterministic answer for a seed (normalized). */
+export function pickAnswer(seed: number, list: WordList = englishWords()): string {
+  return createRng(seed).pick(list.answers);
+}
+
+/** Answer as it should be shown to the player (accents restored), uppercase. */
+export function displayAnswer(answer: string, list: WordList = englishWords()): string {
+  return (list.display.get(answer) ?? answer).toUpperCase();
 }
 
 /**
@@ -56,17 +135,17 @@ export function scoreGuess(guess: string, answer: string): Mark[] {
   return marks;
 }
 
-const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th'];
+export type HardModeViolation = { kind: 'position'; index: number; letter: string } | { kind: 'contains'; letter: string };
 
 /**
  * Hard mode: revealed greens must stay in place and revealed yellows must be reused
- * (as many copies as any single earlier guess revealed). Returns the NYT-style message or null.
+ * (as many copies as any single earlier guess revealed). Letters are uppercase.
  */
-export function hardModeError(guess: string, previous: readonly { word: string; marks: readonly Mark[] }[]): string | null {
+export function hardModeViolation(guess: string, previous: readonly { word: string; marks: readonly Mark[] }[]): HardModeViolation | null {
   const g = guess.toLowerCase();
   for (const p of previous) {
     for (let i = 0; i < WORD_LEN; i++) {
-      if (p.marks[i] === 'correct' && g[i] !== p.word[i]) return `${ORDINALS[i]} letter must be ${p.word[i].toUpperCase()}`;
+      if (p.marks[i] === 'correct' && g[i] !== p.word[i]) return { kind: 'position', index: i, letter: p.word[i].toUpperCase() };
     }
   }
   for (const p of previous) {
@@ -77,10 +156,21 @@ export function hardModeError(guess: string, previous: readonly { word: string; 
     for (const [ch, n] of need) {
       let have = 0;
       for (const c of g) if (c === ch) have++;
-      if (have < n) return `Guess must contain ${ch.toUpperCase()}`;
+      if (have < n) return { kind: 'contains', letter: ch.toUpperCase() };
     }
   }
   return null;
+}
+
+/** Hard-mode message in the given language (NYT-style in English), or null. */
+export function hardModeError(
+  guess: string,
+  previous: readonly { word: string; marks: readonly Mark[] }[],
+  t: Pick<WordleStrings, 'mustBeAt' | 'mustContain'> = STR.en,
+): string | null {
+  const v = hardModeViolation(guess, previous);
+  if (!v) return null;
+  return v.kind === 'position' ? t.mustBeAt(v.index, v.letter) : t.mustContain(v.letter);
 }
 
 const RANK: Record<Mark, number> = { absent: 1, present: 2, correct: 3 };

@@ -8,24 +8,32 @@ import {
   MAX_GUESSES,
   MAX_HINTS,
   WORD_LEN,
+  displayAnswer,
+  englishWords,
   hardModeError,
   isValidGuess,
+  keyToLetter,
   keyboardMarks,
+  loadWordList,
   nextHintPosition,
   pickAnswer,
   scoreGuess,
   shareGrid,
   type Mark,
+  type WordLang,
+  type WordList,
 } from './logic';
+import { STR, type WordleStrings } from './i18n';
 import styles from './Game.module.css';
 
 const FLIP_STAGGER = 250;
 const FLIP_MS = 500;
 const REVEAL_MS = FLIP_STAGGER * (WORD_LEN - 1) + FLIP_MS;
-const PRAISE = ['Genius', 'Magnificent', 'Impressive', 'Splendid', 'Great', 'Phew'];
-const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
-const ORD = ['1st', '2nd', '3rd', '4th', '5th'];
-const MARK_LABEL: Record<Mark, string> = { correct: 'correct', present: 'in the word', absent: 'not in the word' };
+/** On-screen keyboards per word list. Spanish adds Ñ after L, so its middle row needs no spacers. */
+const KEY_ROWS: Record<WordLang, string[]> = {
+  en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
+  es: ['qwertyuiop', 'asdfghjklñ', 'zxcvbnm'],
+};
 
 interface Row {
   word: string;
@@ -34,8 +42,54 @@ interface Row {
 
 type Status = 'playing' | 'won' | 'lost';
 
-export default function Game({ seed, paused, onReady, onHint, onComplete }: GameProps) {
-  const answer = useMemo(() => pickAnswer(seed), [seed]);
+/** Loads the word list picked by the `words` option (not the UI language), then shows the board. */
+export default function Game(props: GameProps) {
+  const wordLang: WordLang = props.options.words === 'es' ? 'es' : 'en';
+  const t = STR[props.lang];
+  const [list, setList] = useState<WordList | null>(() => (wordLang === 'en' ? englishWords() : null));
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (list) return;
+    let alive = true;
+    loadWordList(wordLang).then(
+      (l) => alive && setList(l),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [wordLang, list, attempt]);
+
+  if (!list) {
+    return (
+      <div className="lp-loading" role="status">
+        {failed ? (
+          <p>
+            {t.loadFailed}{' '}
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setFailed(false);
+                setAttempt((a) => a + 1);
+              }}
+            >
+              {t.retry}
+            </button>
+          </p>
+        ) : (
+          t.loadingWords
+        )}
+      </div>
+    );
+  }
+  return <Board {...props} list={list} t={t} />;
+}
+
+function Board({ seed, paused, onReady, onHint, onComplete, list, t }: GameProps & { list: WordList; t: WordleStrings }) {
+  const answer = useMemo(() => pickAnswer(seed, list), [seed, list]);
   const [hardMode] = useGameSetting('wordle', 'hardMode', false);
   const [highContrast] = useGameSetting('wordle', 'highContrast', false);
 
@@ -70,10 +124,10 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
   }, []);
 
   const submit = useCallback(() => {
-    if (current.length < WORD_LEN) return reject('Not enough letters');
-    if (!isValidGuess(current)) return reject('Not in word list');
+    if (current.length < WORD_LEN) return reject(t.notEnoughLetters);
+    if (!isValidGuess(current, list)) return reject(t.notInList);
     if (hardMode) {
-      const err = hardModeError(current, rows);
+      const err = hardModeError(current, rows, t);
       if (err) return reject(err);
     }
     const row: Row = { word: current, marks: scoreGuess(current, answer) };
@@ -90,40 +144,41 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
         next.map((r) => r.marks),
         highContrast,
       );
-      const WORD = answer.toUpperCase();
+      const WORD = displayAnswer(answer, list);
       if (won) {
         setStatus('won');
         setBounce(true);
-        toast(PRAISE[idx] ?? 'Phew', 1600);
+        toast(t.praise[idx] ?? t.praise[t.praise.length - 1], 1600);
         onComplete({
           won: true,
           guesses: next.length,
           share,
           summary: (
             <>
-              The word was <strong>{WORD}</strong>
+              {t.wordWas} <strong>{WORD}</strong>
             </>
           ),
         });
       } else if (next.length >= MAX_GUESSES) {
         setStatus('lost');
         toast(WORD, 3000);
-        onComplete({ won: false, guesses: MAX_GUESSES, share, summary: `The word was ${WORD}` });
+        onComplete({ won: false, guesses: MAX_GUESSES, share, summary: `${t.wordWas} ${WORD}` });
       }
     }, REVEAL_MS);
-  }, [answer, current, hardMode, highContrast, onComplete, reject, rows]);
+  }, [answer, current, hardMode, highContrast, list, onComplete, reject, rows, t]);
 
   const press = useCallback(
     (key: string) => {
       if (locked) return;
       if (key === 'enter') submit();
       else if (key === 'back') setCurrent((c) => c.slice(0, -1));
-      else if (/^[a-z]$/.test(key)) setCurrent((c) => (c.length < WORD_LEN ? c + key : c));
+      else if (keyToLetter(key, list.lang) === key) setCurrent((c) => (c.length < WORD_LEN ? c + key : c));
     },
-    [locked, submit],
+    [list.lang, locked, submit],
   );
 
-  // Physical keyboard.
+  // Physical keyboard. Accented letters map to their base letter; Ñ only exists in the Spanish list.
+  const wordLang = list.lang;
   const pressRef = useRef(press);
   useEffect(() => {
     pressRef.current = press;
@@ -131,14 +186,14 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target instanceof Element ? e.target : null;
-      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
       // A shell modal (help, settings, results) is open on top of the board.
       if (document.querySelector('[role="dialog"]')) return;
       let key: string | null = null;
       if (e.key === 'Enter') key = 'enter';
       else if (e.key === 'Backspace') key = 'back';
-      else if (/^[a-zA-Z]$/.test(e.key)) key = e.key.toLowerCase();
+      else key = keyToLetter(e.key, wordLang);
       if (!key) return;
       // Stop a focused button (e.g. Hint) from also activating on Enter.
       e.preventDefault();
@@ -146,7 +201,7 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [wordLang]);
 
   const hintPos = status === 'playing' ? nextHintPosition(seed, answer, rows, hints) : null;
   const canHint = !locked && hints.length < MAX_HINTS && hintPos !== null;
@@ -163,7 +218,7 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
 
   return (
     <div className={rootClass}>
-      <div className={styles.grid} role="grid" aria-label="Wordle board">
+      <div className={styles.grid} role="grid" aria-label={t.board}>
         {Array.from({ length: MAX_GUESSES }, (_, r) => {
           const done = rows[r];
           const isActive = r === activeRow;
@@ -174,7 +229,7 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
               key={r}
               className={rowClass}
               role="row"
-              aria-label={`Row ${r + 1}`}
+              aria-label={t.row(r + 1)}
               onAnimationEnd={(e) => {
                 if (e.target === e.currentTarget) setShaking(false);
               }}
@@ -193,7 +248,11 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
                 ]
                   .filter(Boolean)
                   .join(' ');
-                const label = ch ? `${ch.toUpperCase()}${mark && revealing !== r ? `, ${MARK_LABEL[mark]}` : ''}` : ghost ? `hint ${ghost.toUpperCase()}` : 'empty';
+                const label = ch
+                  ? `${ch.toUpperCase()}${mark && revealing !== r ? `, ${t.marks[mark]}` : ''}`
+                  : ghost
+                    ? t.hintTile(ghost.toUpperCase())
+                    : t.empty;
                 return (
                   <div key={c} role="gridcell" aria-label={label} className={cls} data-mark={mark} style={{ '--i': c } as CSSProperties}>
                     {ch || ghost}
@@ -206,27 +265,30 @@ export default function Game({ seed, paused, onReady, onHint, onComplete }: Game
       </div>
 
       <div className={styles.hintRow}>
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={takeHint} disabled={!canHint} badge={`${MAX_HINTS - hints.length}`} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={takeHint} disabled={!canHint} badge={`${MAX_HINTS - hints.length}`} />
         {hints.map((p) => (
-          <span key={p} className={styles.hintPill} aria-label={`Position ${p + 1} is ${answer[p].toUpperCase()}`}>
+          <span key={p} className={styles.hintPill} aria-label={t.hintPillAria(p, answer[p].toUpperCase())}>
             <span className={styles.hintTile}>{answer[p]}</span>
-            {ORD[p]} letter
+            {t.hintPill(p)}
           </span>
         ))}
       </div>
 
-      <div className={styles.keyboard} aria-label="Keyboard">
-        {KEY_ROWS.map((keys, ri) => (
-          <div key={ri} className={styles.keyRow}>
-            {ri === 1 && <span className={styles.half} />}
-            {ri === 2 && <KeyButton k="enter" label="Enter" wide onPress={press} />}
-            {[...keys].map((k) => (
-              <KeyButton key={k} k={k} label={k} mark={kb[k]} onPress={press} />
-            ))}
-            {ri === 2 && <KeyButton k="back" label={<Backspace size={20} />} aria="Backspace" wide onPress={press} />}
-            {ri === 1 && <span className={styles.half} />}
-          </div>
-        ))}
+      <div className={styles.keyboard} aria-label={t.keyboard}>
+        {KEY_ROWS[list.lang].map((keys, ri) => {
+          const spacers = ri === 1 && keys.length < 10;
+          return (
+            <div key={ri} className={styles.keyRow}>
+              {spacers && <span className={styles.half} />}
+              {ri === 2 && <KeyButton k="enter" label={t.enter} aria={t.enterAria} wide onPress={press} />}
+              {[...keys].map((k) => (
+                <KeyButton key={k} k={k} label={k} mark={kb[k]} markLabels={t.marks} onPress={press} />
+              ))}
+              {ri === 2 && <KeyButton k="back" label={<Backspace size={20} />} aria={t.backspace} wide onPress={press} />}
+              {spacers && <span className={styles.half} />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -237,6 +299,7 @@ function KeyButton({
   label,
   aria,
   mark,
+  markLabels,
   wide,
   onPress,
 }: {
@@ -244,6 +307,7 @@ function KeyButton({
   label: ReactNode;
   aria?: string;
   mark?: Mark;
+  markLabels?: Record<Mark, string>;
   wide?: boolean;
   onPress(k: string): void;
 }) {
@@ -252,7 +316,7 @@ function KeyButton({
       type="button"
       className={`${styles.key}${wide ? ` ${styles.wide}` : ''}`}
       data-mark={mark}
-      aria-label={aria ?? (typeof label === 'string' ? `${label}${mark ? `, ${MARK_LABEL[mark]}` : ''}` : undefined)}
+      aria-label={aria ?? (typeof label === 'string' ? `${label}${mark && markLabels ? `, ${markLabels[mark]}` : ''}` : undefined)}
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => onPress(k)}
     >

@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   ANSWERS,
+  displayAnswer,
+  englishWords,
   hardModeError,
+  hardModeViolation,
+  keyToLetter,
+  loadWordList,
+  normalizeWord,
   isValidGuess,
   keyboardMarks,
   nextHintPosition,
@@ -10,7 +16,10 @@ import {
   shareGrid,
   validGuesses,
   type Mark,
+  type WordList,
 } from './logic';
+import { STR } from './i18n';
+import { ES_ANSWERS_RAW } from './words-es';
 
 const row = (word: string, answer: string) => ({ word, marks: scoreGuess(word, answer) });
 
@@ -133,5 +142,117 @@ describe('keyboardMarks / share / hints', () => {
     expect(b).not.toBe(a);
     expect([0, 1, 3]).toContain(b);
     expect(nextHintPosition(9, answer, [row('crane', answer)], [])).toBeNull();
+  });
+});
+
+describe('normalization', () => {
+  it('uppercase/lowercase and accents collapse, Ñ stays its own letter', () => {
+    expect(normalizeWord('ÁRBOL')).toBe('arbol');
+    expect(normalizeWord('camión')).toBe('camion');
+    expect(normalizeWord('pingüino')).toBe('pinguino');
+    expect(normalizeWord('Éxito')).toBe('exito');
+    expect(normalizeWord('AÑEJO')).toBe('añejo');
+    expect(normalizeWord('niño')).not.toBe(normalizeWord('nino'));
+    // Decomposed input (n + combining tilde) still becomes ñ.
+    expect(normalizeWord('an\u0303o')).toBe('año');
+  });
+
+  it('maps physical keys per word list', () => {
+    expect(keyToLetter('á', 'es')).toBe('a');
+    expect(keyToLetter('Ü', 'es')).toBe('u');
+    expect(keyToLetter('ñ', 'es')).toBe('ñ');
+    expect(keyToLetter('Ñ', 'es')).toBe('ñ');
+    expect(keyToLetter('ñ', 'en')).toBeNull();
+    expect(keyToLetter('é', 'en')).toBe('e');
+    expect(keyToLetter('Q', 'en')).toBe('q');
+    for (const k of ['Dead', 'Enter', '1', ' ', 'ç']) expect(keyToLetter(k, 'es')).toBeNull();
+  });
+});
+
+describe('Spanish word list', () => {
+  let es: WordList;
+  beforeAll(async () => {
+    es = await loadWordList('es');
+  });
+
+  it('loads once and is cached', async () => {
+    expect(await loadWordList('es')).toBe(es);
+    expect(await loadWordList('en')).toBe(englishWords());
+  });
+
+  it('has curated normalized answers, all of them valid guesses', () => {
+    expect(es.answers.length).toBeGreaterThanOrEqual(1400);
+    expect(es.answers.length).toBeLessThanOrEqual(2500);
+    expect(new Set(es.answers).size).toBe(es.answers.length);
+    for (const w of es.answers) {
+      expect(w).toMatch(/^[a-zñ]{5}$/);
+      expect(es.valid.has(w)).toBe(true);
+    }
+    expect(es.valid.size).toBeGreaterThan(9000);
+    for (const w of es.valid) expect(w).toMatch(/^[a-zñ]{5}$/);
+    // Raw data: fixed-width 5-character display forms.
+    expect(ES_ANSWERS_RAW.length).toBe(es.answers.length * 5);
+  });
+
+  it('accepts common words with or without accents and rejects junk', () => {
+    for (const w of ['perro', 'ÁRBOL', 'arbol', 'Niños', 'jugar', 'queso', 'playa', 'huevo', 'señor', 'SEÑOR', 'comió', 'tengo', 'dimos', 'llave'])
+      expect(isValidGuess(w, es), w).toBe(true);
+    for (const w of ['xxxxx', 'aeiou', 'qwert', 'crane', 'senor', 'nino']) expect(isValidGuess(w, es)).toBe(false);
+    // English list unaffected by Spanish-only words.
+    expect(isValidGuess('perro')).toBe(false);
+    expect(isValidGuess('crane')).toBe(true);
+  });
+
+  it('restores accents for display', () => {
+    expect(displayAnswer('arbol', es)).toBe('ÁRBOL');
+    expect(displayAnswer('perro', es)).toBe('PERRO');
+    expect(displayAnswer('señor', es)).toBe('SEÑOR');
+    expect(displayAnswer('crane')).toBe('CRANE');
+  });
+
+  it('picks answers deterministically per seed', () => {
+    for (const seed of [1, 42, 123456, 2 ** 31 - 1]) {
+      expect(pickAnswer(seed, es)).toBe(pickAnswer(seed, es));
+      expect(es.answers).toContain(pickAnswer(seed, es));
+    }
+    const picks = new Set<string>();
+    for (let s = 1; s <= 200; s++) picks.add(pickAnswer(s * 7919, es));
+    expect(picks.size).toBeGreaterThan(150);
+    // Same seed, different lists: English picks are unchanged by the Spanish list.
+    expect(pickAnswer(42, englishWords())).toBe(pickAnswer(42));
+  });
+
+  it('scores Ñ as its own letter', () => {
+    const str = (m: Mark[]) => m.map((x) => (x === 'correct' ? 'G' : x === 'present' ? 'Y' : '-')).join('');
+    expect(str(scoreGuess('niños', 'niños'))).toBe('GGGGG');
+    // N is not Ñ: "canon" vs "caños": C,A green; N absent (answer has Ñ, not N); O green; N absent.
+    expect(str(scoreGuess('canon', 'caños'))).toBe('GG-G-');
+    // Ñ in the wrong spot is yellow.
+    expect(str(scoreGuess('ñandu', 'añejo'))).toBe('YY---');
+    const k = keyboardMarks([row('añejo', 'niños'), row('canon', 'caños')]);
+    expect(k['ñ']).toBe('present');
+    expect(k.n).toBe('absent');
+  });
+});
+
+describe('hard mode messages', () => {
+  it('returns structured violations and localized text', () => {
+    const prev = [row('crane', 'shame')];
+    expect(hardModeViolation('steal', prev)).toEqual({ kind: 'position', index: 2, letter: 'A' });
+    expect(hardModeError('steal', prev, STR.es)).toBe('La 3.ª letra debe ser A');
+    const prev2 = [row('stare', 'crane')];
+    expect(hardModeViolation('blame', prev2)).toEqual({ kind: 'contains', letter: 'R' });
+    expect(hardModeError('blame', prev2, STR.es)).toBe('Debe incluir la R');
+    expect(hardModeError('nieto', [row('añejo', 'niños')], STR.es)).toBe('Debe incluir la Ñ');
+    expect(hardModeError('niños', [row('añejo', 'niños')], STR.es)).toBeNull();
+  });
+});
+
+describe('strings', () => {
+  it('English and Spanish tables have the same keys', () => {
+    expect(Object.keys(STR.es).sort()).toEqual(Object.keys(STR.en).sort());
+    expect(STR.es.praise.length).toBe(STR.en.praise.length);
+    expect(STR.en.hintPill(1)).toBe('2nd letter');
+    expect(STR.es.hintPill(1)).toBe('2.ª letra');
   });
 });
