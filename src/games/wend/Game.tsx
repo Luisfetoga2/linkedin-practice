@@ -147,6 +147,9 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     return out;
   };
 
+  /** Tiles of lines that already spell a found word: new strokes can't touch them. */
+  const lockedCells = (ls: Line[]): Set<number> => new Set(foundWords(ls).flatMap((f) => f.path));
+
   /** Replace the committed line set (one undo step when it actually changed). */
   const commit = (next: Line[]) => {
     const before = linesRef.current;
@@ -180,7 +183,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     if (tapCell != null && head != null && head !== tapCell && adjacent(size, head, tapCell) && !before.some((l) => l.includes(tapCell))) {
       const li = before.findIndex((l) => l[l.length - 1] === head);
       if (li >= 0 && assignWords(before, letters, words)[li] < 0) {
-        const t = beginStroke(grid, before, head);
+        const t = beginStroke(grid, before, head, lockedCells(before));
         if (t) final = stepStroke(grid, t, tapCell);
       }
     }
@@ -226,7 +229,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     if (walls[c]) return;
     e.preventDefault();
     if (strokeRef.current) endStroke();
-    const s = beginStroke(grid, linesRef.current, c);
+    const s = beginStroke(grid, linesRef.current, c, lockedCells(linesRef.current));
     if (!s) return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -251,7 +254,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
       const p = toBoard(ev);
       if (!p) continue;
       d.cur = trackPointer(size, d.cur, d.last, p, {
-        canEnter: (c) => !walls[c],
+        canEnter: (c) => !walls[c] && !s!.locked.has(c),
         isBack: (c) => isBackStep(s!, c),
         enter: (c) => {
           d.moved = true;
@@ -355,7 +358,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
       setCursor(headOf(st));
     };
     const start = (c: number) => {
-      const st = beginStroke(grid, linesRef.current, c);
+      const st = beginStroke(grid, linesRef.current, c, lockedCells(linesRef.current));
       if (!st) return;
       keyStrokeRef.current = true;
       setHint((h) => (h?.blocking.length ? null : h));

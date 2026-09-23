@@ -763,12 +763,7 @@
   text-align: center;
 }
 
-/* Longer labels (e.g. Spanish "Deshacer") shrink the text, never the icon. */
+/* Longer labels (e.g. Spanish "Deshacer") never squeeze the icon. */
 .lp-control svg {
   flex-shrink: 0;
-}
-.lp-control > span:not(.lp-control-badge) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

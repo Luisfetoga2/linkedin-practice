@@ -18,6 +18,8 @@
  * - Stepping onto a tile of the stroke's own line retracts back to that tile.
  * - Walls can't be entered; steps must be orthogonal to the head (except
  *   retracting, which works from anywhere).
+ * - Locked tiles (lines that already spell a found word) behave like walls: a
+ *   stroke can't start on, pass through, merge with or cut them.
  */
 
 export type Line = number[];
@@ -35,7 +37,11 @@ export interface Stroke {
   active: Line;
   /** Set right after a merge carried the head away from the pointer. */
   merge: { before: Stroke; from: number } | null;
+  /** Tiles of found words; strokes treat them like walls. */
+  locked: ReadonlySet<number>;
 }
+
+const NONE: ReadonlySet<number> = new Set();
 
 export function adjacent(size: number, a: number, b: number): boolean {
   const dr = Math.abs(Math.floor(a / size) - Math.floor(b / size));
@@ -45,15 +51,15 @@ export function adjacent(size: number, a: number, b: number): boolean {
 
 const isOpen = (g: Grid, c: number) => Number.isInteger(c) && c >= 0 && c < g.size * g.size && !g.walls[c];
 
-/** Begin a stroke on cell c. Returns null when c can't be drawn on (a wall). */
-export function beginStroke(g: Grid, lines: Line[], c: number): Stroke | null {
-  if (!isOpen(g, c)) return null;
+/** Begin a stroke on cell c. Returns null when c can't be drawn on (a wall or a found word). */
+export function beginStroke(g: Grid, lines: Line[], c: number, locked: ReadonlySet<number> = NONE): Stroke | null {
+  if (!isOpen(g, c) || locked.has(c)) return null;
   // Single-tile lines are just a "selected tile"; they don't outlive the next stroke.
   const kept = lines.filter((l) => l.length > 1 || l[0] === c);
   const i = kept.findIndex((l) => l.includes(c));
-  if (i < 0) return { others: kept, active: [c], merge: null };
+  if (i < 0) return { others: kept, active: [c], merge: null, locked };
   const L = kept[i];
-  return { others: kept.filter((_, j) => j !== i), active: L.slice(0, L.indexOf(c) + 1), merge: null };
+  return { others: kept.filter((_, j) => j !== i), active: L.slice(0, L.indexOf(c) + 1), merge: null, locked };
 }
 
 /**
@@ -61,7 +67,8 @@ export function beginStroke(g: Grid, lines: Line[], c: number): Stroke | null {
  * when nothing changes, so callers can compare by identity.
  */
 export function stepStroke(g: Grid, s: Stroke, d: number): Stroke {
-  if (!isOpen(g, d)) return s;
+  if (!isOpen(g, d) || s.locked.has(d)) return s;
+  const locked = s.locked;
   const head = s.active[s.active.length - 1];
   if (d === head) return s.merge ? { ...s, merge: null } : s;
   if (s.merge) {
@@ -70,18 +77,18 @@ export function stepStroke(g: Grid, s: Stroke, d: number): Stroke {
     if (s.active.includes(d)) return s;
   }
   const idx = s.active.indexOf(d);
-  if (idx >= 0) return { others: s.others, active: s.active.slice(0, idx + 1), merge: null };
+  if (idx >= 0) return { others: s.others, active: s.active.slice(0, idx + 1), merge: null, locked };
   if (!adjacent(g.size, head, d)) return s;
   const mi = s.others.findIndex((l) => l.includes(d));
-  if (mi < 0) return { others: s.others, active: [...s.active, d], merge: null };
+  if (mi < 0) return { others: s.others, active: [...s.active, d], merge: null, locked };
   const M = s.others[mi];
   const rest = s.others.filter((_, j) => j !== mi);
   const j = M.indexOf(d);
   if (j === 0 || j === M.length - 1) {
     const tail = j === 0 ? M : [...M].reverse();
-    return { others: rest, active: [...s.active, ...tail], merge: tail.length > 1 ? { before: s, from: head } : null };
+    return { others: rest, active: [...s.active, ...tail], merge: tail.length > 1 ? { before: s, from: head } : null, locked };
   }
-  return { others: rest, active: [...s.active, d], merge: null };
+  return { others: rest, active: [...s.active, d], merge: null, locked };
 }
 
 /** True when entering d would move the stroke backwards (retract / un-merge). */

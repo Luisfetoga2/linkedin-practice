@@ -275,3 +275,33 @@ describe('wend pointer tracking', () => {
     expect(run(G, [{ x: 0.5, y: 0.5 }, { x: 5, y: -1 }]).line).toEqual([0, 1, 2, 3]);
   });
 });
+
+describe('found words are locked', () => {
+  const G5: Grid = { size: 4, walls: new Array(16).fill(false) };
+  const found: Line = [0, 1, 2];
+  const locked = new Set(found);
+
+  it('cannot start a stroke on a found word', () => {
+    expect(beginStroke(G5, [found], 1, locked)).toBeNull();
+    expect(beginStroke(G5, [found], 0, locked)).toBeNull();
+  });
+
+  it('cannot enter, merge with, or cut through a found word', () => {
+    // From 4 (below 0): stepping onto 0 would normally merge with the found line.
+    let s = beginStroke(G5, [found], 4, locked)!;
+    expect(stepStroke(G5, s, 0)).toBe(s);
+    // From 5 (below 1): stepping onto 1 would normally cut the found line.
+    s = beginStroke(G5, [found], 5, locked)!;
+    expect(stepStroke(G5, s, 1)).toBe(s);
+    // The found word stays intact while the stroke goes around it.
+    s = stepStroke(G5, s, 6);
+    s = stepStroke(G5, s, 7);
+    s = stepStroke(G5, s, 3);
+    expect(strokeLines(s)).toEqual([found, [5, 6, 7, 3]]);
+  });
+
+  it('unlocked lines still merge and cut as before', () => {
+    const s = stepStroke(G5, beginStroke(G5, [found], 4)!, 0);
+    expect(s.active).toEqual([4, 0, 1, 2]);
+  });
+});
