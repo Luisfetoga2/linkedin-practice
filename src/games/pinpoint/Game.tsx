@@ -12,6 +12,8 @@ import styles from './Game.module.css';
 interface Attempt {
   text: string;
   correct: boolean;
+  /** A skipped turn: uses a guess to reveal the next clue. */
+  skipped?: boolean;
 }
 type Status = 'playing' | 'won' | 'lost';
 
@@ -23,6 +25,14 @@ function Lock() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
       <rect x="5" y="11" width="14" height="10" rx="2" />
       <path d="M8 11V8a4 4 0 018 0v3" />
+    </svg>
+  );
+}
+
+function SkipIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M5 5l8 7-8 7M15 5v14" />
     </svg>
   );
 }
@@ -55,11 +65,13 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
   const [text, setText] = useState('');
   const [shake, setShake] = useState(false);
   /** Closeness of each guess, computed once the round ends. */
-  const [scores, setScores] = useState<Closeness[] | null>(null);
+  const [scores, setScores] = useState<(Closeness | null)[] | null>(null);
   /** Index of the first card revealed by the end-of-round cascade (for stagger delays). */
   const [cascadeFrom, setCascadeFrom] = useState(CLUE_COUNT);
   const inputRef = useRef<HTMLInputElement>(null);
-  const barRef = useRef<HTMLFormElement>(null);
+  const stackRef = useRef<HTMLOListElement>(null);
+  /** On-screen keyboard is up (phones): compact cards so clues + input fit above it. */
+  const [kbOpen, setKbOpen] = useState(false);
   const readyRef = useRef(false);
   const doneRef = useRef(false);
 
@@ -80,9 +92,9 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
   const used = attempts.length;
   const left = MAX_GUESSES - used;
 
-  const scoreAll = (list: Attempt[]): Closeness[] => {
+  const scoreAll = (list: Attempt[]): (Closeness | null)[] => {
     const near = content.nearFor(puzzle.category.name);
-    return list.map((a) => content.scorer.closeness(a.text, puzzle.category, near));
+    return list.map((a) => (a.skipped ? null : content.scorer.closeness(a.text, puzzle.category, near)));
   };
 
   const finish = (next: Attempt[], won: boolean) => {
@@ -95,7 +107,7 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
     const squares = Array.from({ length: MAX_GUESSES }, (_, i) => {
       const a = next[i];
       if (!a) return '⬜';
-      return a.correct ? '🟩' : '🟥';
+      return a.correct ? '🟩' : a.skipped ? '⬛' : '🟥';
     });
     onComplete({
       won,
@@ -111,7 +123,7 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
             {next.map((a, i) => (
               <li key={i}>
                 <span className={styles.summaryGuess}>{a.text}</span> —{' '}
-                <strong>{a.correct ? '✓' : `${sc[i].pct}%`}</strong>
+                <strong>{a.correct ? '✓' : sc[i] ? `${sc[i]!.pct}%` : '—'}</strong>
               </li>
             ))}
           </ol>
@@ -133,7 +145,7 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
       return;
     }
     const key = clean(guess);
-    if (attempts.some((a) => clean(a.text) === key)) {
+    if (attempts.some((a) => !a.skipped && clean(a.text) === key)) {
       toast(t.alreadyGuessed);
       return;
     }
@@ -152,15 +164,54 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
     }
   };
 
-  // Keep the guess bar visible above the on-screen keyboard.
-  const onFocus = () => {
-    if (!window.matchMedia?.('(pointer: coarse)').matches) return;
-    window.setTimeout(() => barRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 280);
+  /** Use a guess to reveal the next clue. Not a hint: it costs a guess instead. */
+  const skip = () => {
+    if (locked || revealed >= CLUE_COUNT) return;
+    const next: Attempt[] = [...attempts, { text: t.skipped, correct: false, skipped: true }];
+    setAttempts(next);
+    if (next.length >= MAX_GUESSES) finish(next, false);
   };
 
+  // Phones: when the on-screen keyboard opens, browsers scroll the focused input into view and
+  // push the clues off the top. Detect the keyboard via the visual viewport, switch to compact
+  // cards, and scroll so the clue stack sits right under the sticky top bar.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || !window.matchMedia?.('(pointer: coarse)').matches) return;
+    let timer = 0;
+    const align = () => {
+      const stack = stackRef.current;
+      if (!stack) return;
+      const topbar = document.querySelector('.lp-topbar')?.getBoundingClientRect().height ?? 52;
+      const target = stack.getBoundingClientRect().top + window.scrollY - topbar - 8;
+      window.scrollTo({ top: Math.max(0, target), behavior: 'auto' });
+    };
+    const check = () => {
+      const open = document.activeElement === inputRef.current && window.innerHeight - vv.height > 120;
+      setKbOpen(open);
+      if (open) {
+        window.clearTimeout(timer);
+        // Let the browser finish its own scroll-into-view first, then put the clues back on top.
+        timer = window.setTimeout(align, 60);
+      }
+    };
+    vv.addEventListener('resize', check);
+    return () => {
+      vv.removeEventListener('resize', check);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  const onFocus = () => {
+    if (!window.matchMedia?.('(pointer: coarse)').matches) return;
+    // Some browsers resize the visual viewport before focus lands; re-check after the keyboard animates in.
+    window.setTimeout(() => window.visualViewport?.dispatchEvent(new Event('resize')), 350);
+  };
+  const onBlur = () => setKbOpen(false);
+
   return (
-    <div className={`${styles.wrap}${status === 'won' ? ` ${styles.won}` : ''}${status === 'lost' ? ` ${styles.lost}` : ''}`}>
-      <ol className={styles.stack} aria-label={t.clues}>
+    <div className={`${styles.wrap}${status === 'won' ? ` ${styles.won}` : ''}${status === 'lost' ? ` ${styles.lost}` : ''}${kbOpen ? ` ${styles.kbOpen}` : ''}`}>
+      <ol ref={stackRef} className={styles.stack} aria-label={t.clues}>
         {puzzle.clues.map((word, i) => {
           const open = i < revealed;
           const delay = done && i >= cascadeFrom ? (i - cascadeFrom) * CASCADE_MS : 0;
@@ -196,7 +247,7 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
       )}
 
       {!done && (
-        <form ref={barRef} className={styles.bar} onSubmit={submit}>
+        <form className={styles.bar} onSubmit={submit}>
           <div className={`${styles.inputRow}${shake ? ` ${styles.shake}` : ''}`} onAnimationEnd={() => setShake(false)}>
             <input
               ref={inputRef}
@@ -204,6 +255,7 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
               value={text}
               onChange={(e) => setText(e.target.value)}
               onFocus={onFocus}
+              onBlur={onBlur}
               placeholder={t.placeholder}
               aria-label={t.placeholder}
               maxLength={48}
@@ -220,9 +272,22 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
               </svg>
             </button>
           </div>
-          <p className={styles.left} aria-live="polite">
-            {t.guessesLeft(left)}
-          </p>
+          <div className={styles.leftRow}>
+            <p className={styles.left} aria-live="polite">
+              {t.guessesLeft(left)}
+            </p>
+            <button
+              type="button"
+              className={styles.skip}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={skip}
+              disabled={paused || revealed >= CLUE_COUNT}
+              title={t.skipTitle}
+            >
+              {t.skip}
+              <SkipIcon />
+            </button>
+          </div>
         </form>
       )}
 
@@ -233,9 +298,9 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
             {attempts.map((a, i) => {
               const c = scores?.[i];
               return (
-                <li key={i} className={`${styles.guess} ${a.correct ? styles.guessRight : styles.guessWrong}`}>
-                  <span className={styles.guessIcon}>{a.correct ? <Check size={14} /> : <Close size={14} />}</span>
-                  {c || a.correct ? <span className={styles.guessText}>{a.text}</span> : <s className={styles.guessText}>{a.text}</s>}
+                <li key={i} className={`${styles.guess} ${a.correct ? styles.guessRight : a.skipped ? styles.guessSkipped : styles.guessWrong}`}>
+                  <span className={styles.guessIcon}>{a.correct ? <Check size={14} /> : a.skipped ? <SkipIcon /> : <Close size={14} />}</span>
+                  {c || a.correct || a.skipped ? <span className={styles.guessText}>{a.text}</span> : <s className={styles.guessText}>{a.text}</s>}
                   {c && (
                     <span className={`${styles.score} ${styles[c.temp]}`} style={{ animationDelay: `${600 + i * 90}ms` }}>
                       <span className={styles.meter} aria-hidden>

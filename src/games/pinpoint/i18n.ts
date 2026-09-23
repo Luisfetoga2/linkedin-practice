@@ -21,6 +21,9 @@ export const STR = defineStrings(
     howCloseAria: 'How close your guesses were',
     temp: { correct: 'Correct', hot: 'Hot', warm: 'Warm', cold: 'Cold' } as Record<Temperature, string>,
     loadError: "Couldn't load the categories. Check your connection and try again.",
+    skip: 'Skip',
+    skipTitle: 'Skip this guess and see the next clue',
+    skipped: 'Skipped',
   },
   {
     clues: 'Pistas',
@@ -41,5 +44,8 @@ export const STR = defineStrings(
     howCloseAria: 'Qué tan cerca estuvieron tus intentos',
     temp: { correct: 'Acierto', hot: 'Caliente', warm: 'Tibio', cold: 'Frío' },
     loadError: 'No se pudieron cargar las categorías. Revisa tu conexión e inténtalo de nuevo.',
+    skip: 'Saltar',
+    skipTitle: 'Salta este intento y mira la siguiente pista',
+    skipped: 'Saltado',
   },
 );

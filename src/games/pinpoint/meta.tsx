@@ -42,6 +42,7 @@ export const meta: GameMeta = {
         <ul>
           <li>You start with one clue. Type the category and press Enter.</li>
           <li>Each wrong guess reveals the next clue. You have 5 guesses.</li>
+          <li>Stuck? Tap Skip to spend a guess and see the next clue.</li>
           <li>Close answers count — “keys” works for <em>Things with keys</em>.</li>
           <li>When the round ends, see how close each of your guesses was to the category.</li>
         </ul>
@@ -53,6 +54,7 @@ export const meta: GameMeta = {
         <ul>
           <li>Empiezas con una pista. Escribe la categoría y presiona Enter.</li>
           <li>Cada intento fallido revela la siguiente pista. Tienes 5 intentos.</li>
+          <li>¿Sin ideas? Toca Saltar para usar un intento y ver la siguiente pista.</li>
           <li>Las respuestas aproximadas cuentan: “llaves” sirve para <em>Cosas con llave</em>.</li>
           <li>Al terminar la ronda, verás qué tan cerca estuvo cada uno de tus intentos de la categoría.</li>
         </ul>

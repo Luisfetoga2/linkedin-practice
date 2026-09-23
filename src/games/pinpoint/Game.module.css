@@ -258,10 +258,67 @@
   opacity: 0.35;
   cursor: default;
 }
+.leftRow {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 30px;
+}
 .left {
+  margin: 0;
   text-align: center;
   font-size: 13px;
   color: var(--text-2);
+}
+.skip {
+  position: absolute;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.skip:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.skip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.guessSkipped .guessIcon {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.guessSkipped .guessText {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* On-screen keyboard open: compact cards so all clues + the input fit above the keyboard. */
+.kbOpen .stack {
+  gap: 4px;
+}
+.kbOpen .card {
+  height: 38px;
+  border-radius: 8px;
+}
+.kbOpen .word {
+  font-size: 16px;
+}
+.kbOpen .placeholder {
+  font-size: 11px;
+}
+.kbOpen .bar {
+  position: static;
+  padding-top: 4px;
 }
 
 .shake {
