@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton } from '../../core/components/Controls';
-import { Bulb, Check } from '../../core/components/Icons';
+import { Bulb } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import type { WordLength } from './data';
 import { generateLadder, MIDDLE, oneApart, RUNGS } from './generator';
@@ -367,11 +367,12 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   const renderCells = (w: number | null, active: boolean) =>
     Array.from({ length: N }, (_, c) => {
       const ch = w === null ? '' : entries[w][c];
-      const isActive = active && w !== null && sel.c === c && editable(w);
+      const open = w !== null && editable(w);
+      const isActive = active && open && sel.c === c;
       return (
         <div
           key={c}
-          className={cx(styles.cell, isActive && styles.cellActive, w !== null && given[w][c] && styles.cellGiven, ch && styles.cellFilled)}
+          className={cx(styles.cell, open && styles.cellSlot, isActive && styles.cellActive, w !== null && given[w][c] && styles.cellGiven, ch && styles.cellFilled)}
           onClick={(e) => {
             if (w === null) return;
             e.stopPropagation();
@@ -391,14 +392,16 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     </svg>
   );
   const gripIcon = (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-      <path d="M5 8h14M5 12h14M5 16h14" />
+    <svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+      <path d="M3 4.5h16M3 9.5h16" />
     </svg>
   );
 
   const renderEnd = (slot: 'T' | 'B') => {
     const w = unlocked ? (slot === 'T' ? topW : botW) : null;
-    const isSel = w !== null && sel.w === w && phase === 'final';
+    // Both end rungs share one clue, so both light up in the final phase.
+    const isSel = w !== null && phase === 'final';
+    const isCursor = w !== null && sel.w === w && phase === 'final';
     const done = w !== null && phase === 'done';
     return (
       <div
@@ -411,9 +414,12 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
         onClick={() => w !== null && selectCell(w, sel.w === w ? sel.c : firstEmptyCol(w))}
         aria-label={t.endRung(slot === 'T', !unlocked ? 'locked' : done ? 'solved' : 'open')}
       >
-        <span className={styles.side}>{done && <Check size={18} />}</span>
-        <div className={styles.cells}>{renderCells(w, isSel)}</div>
-        <span className={cx(styles.side, styles.lock)}>{!unlocked && lockIcon}</span>
+        <span className={styles.side} />
+        <div className={styles.bar}>
+          <div className={styles.cells}>{renderCells(w, isCursor)}</div>
+          {!unlocked && <span className={styles.lock}>{lockIcon}</span>}
+        </div>
+        <span className={styles.side} />
       </div>
     );
   };
@@ -502,22 +508,23 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
                 {...(phase === 'order' ? dragHandlers(w) : {})}
                 aria-label={t.midRung(slot + 2, done)}
               >
-                <span className={styles.side}>{done && <Check size={18} />}</span>
-                <div className={styles.cells}>{renderCells(w, isSel)}</div>
-                <span className={styles.side}>
-                  {!unlocked && (
+                {(['left', 'right'] as const).map((side) => (
+                  <span key={side} className={cx(styles.side, side === 'left' ? styles.sideLeft : styles.sideRight)}>
                     <button
                       type="button"
-                      className={styles.handle}
+                      className={cx(styles.handle, unlocked && styles.handleIdle)}
                       aria-label={t.dragToReorder}
                       tabIndex={-1}
                       onClick={(e) => e.stopPropagation()}
-                      {...(phase === 'clues' ? dragHandlers(w) : {})}
+                      {...(phase === 'clues' && !unlocked ? dragHandlers(w) : {})}
                     >
                       {gripIcon}
                     </button>
-                  )}
-                </span>
+                  </span>
+                ))}
+                <div className={styles.bar}>
+                  <div className={styles.cells}>{renderCells(w, isSel)}</div>
+                </div>
               </div>
             );
           })}
