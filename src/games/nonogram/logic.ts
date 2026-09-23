@@ -1,4 +1,5 @@
 import { createRng, type Rng } from '../../lib/rng';
+import type { Picture } from './pictures/types';
 
 /** Cell knowledge: -1 unknown, 0 empty, 1 filled. */
 export type Known = -1 | 0 | 1;
@@ -9,6 +10,8 @@ export interface NonogramPuzzle {
   solution: Uint8Array;
   rows: number[][];
   cols: number[][];
+  /** Name of the hand-drawn picture ("cat"), when the puzzle came from the library. */
+  name?: string;
 }
 
 /** Run lengths of filled cells; an empty line has no runs (shown as "0"). */
@@ -201,11 +204,42 @@ function randomPicture(n: number, rng: Rng): Uint8Array {
   return g;
 }
 
+export function pictureGrid(pic: Picture, mirror: boolean): Uint8Array {
+  const n = pic.rows.length;
+  const g = new Uint8Array(n * n);
+  pic.rows.forEach((row, r) => {
+    for (let c = 0; c < n; c++) g[r * n + c] = row[mirror ? n - 1 - c : c] === '#' ? 1 : 0;
+  });
+  return g;
+}
+
+/** True when pure line logic fully solves `solution` (which also proves it's the only solution). */
+export function isLineSolvable(solution: Uint8Array, n: number): boolean {
+  const known = lineSolve({ size: n, ...cluesFor(solution, n) });
+  return !!known && known.every((k) => k !== -1);
+}
+
 /**
- * Deterministic generator. A picture is accepted only when pure line logic solves it, which also
- * proves the solution is unique. Stuck pictures are repaired by flipping an undetermined cell.
+ * Deterministic generator. With a picture library, the seed picks a hand-drawn picture (sometimes
+ * mirrored, when the mirror is still line-solvable). Without one, a random blobby picture is used.
  */
-export function generateNonogram(n: number, seed: number): NonogramPuzzle {
+export function generateNonogram(n: number, seed: number, pictures?: readonly Picture[]): NonogramPuzzle {
+  const usable = pictures?.filter((p) => p.rows.length === n) ?? [];
+  if (usable.length) {
+    const rng = createRng(seed * 104729 + n);
+    const pic = rng.pick(usable);
+    let solution = pictureGrid(pic, rng.chance(0.5));
+    if (!isLineSolvable(solution, n)) solution = pictureGrid(pic, false);
+    return { size: n, solution, ...cluesFor(solution, n), name: pic.name };
+  }
+  return randomNonogram(n, seed);
+}
+
+/**
+ * Random fallback. A picture is accepted only when pure line logic solves it, which also proves
+ * the solution is unique. Stuck pictures are repaired by flipping an undetermined cell.
+ */
+function randomNonogram(n: number, seed: number): NonogramPuzzle {
   const rng = createRng(seed * 7919 + n);
   for (let attempt = 0; attempt < 400; attempt++) {
     const solution = randomPicture(n, rng);

@@ -4,6 +4,7 @@ import { ControlBar, ControlButton, HintBubble } from '../../core/components/Con
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import { colOf, generateNonogram, hintFor, isSolved, rowOf, runsOf, sameRuns, type NonogramHint } from './logic';
+import { PICTURES } from './pictures';
 import styles from './Game.module.css';
 
 const EMPTY = 0;
@@ -43,6 +44,8 @@ function paintSegment(before: Board, n: number, d: Drag, cell: number): Board {
   return out;
 }
 
+const article = (name: string) => (/^[aeiou]/i.test(name) ? 'an' : 'a');
+
 /** Cross out the leftover squares of every line whose filled runs already match its clue. */
 function autoCrossLines(board: Board, n: number, rows: number[][], cols: number[][]): Board {
   let out: Board | null = null;
@@ -62,7 +65,7 @@ function autoCrossLines(board: Board, n: number, rows: number[][], cols: number[
 
 export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
   const n = [5, 10, 15].includes(Number(options.size)) ? Number(options.size) : 10;
-  const puzzle = useMemo(() => generateNonogram(n, seed), [n, seed]);
+  const puzzle = useMemo(() => generateNonogram(n, seed, PICTURES[n]), [n, seed]);
   const [autoCross] = useGameSetting<boolean>('nonogram', 'autoCross', false);
   const [showMistakes] = useGameSetting<boolean>('nonogram', 'showMistakes', false);
 
@@ -123,7 +126,15 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setWon(true);
     setHint(null);
     drag.current = null;
-    cb.current.onComplete({ won: true, share: `🖼️ Nonogram ${n}×${n}` });
+    cb.current.onComplete({
+      won: true,
+      share: `🖼️ Nonogram ${n}×${n}`,
+      summary: puzzle.name ? (
+        <>
+          It was {article(puzzle.name)} <strong>{puzzle.name}</strong>!
+        </>
+      ) : undefined,
+    });
   }, [board, puzzle, n, won]);
 
   const commit = (before: Board, after: Board) => {
@@ -288,7 +299,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                 hintLine?.kind === 'col' && hintLine.index === c ? styles.hinted : '',
               ].join(' ')}
             >
-              {clue.map((v, k) => (
+              {(clue.length ? clue : [0]).map((v, k) => (
                 <span key={k}>{v}</span>
               ))}
             </div>
@@ -305,7 +316,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                 hintLine?.kind === 'row' && hintLine.index === r ? styles.hinted : '',
               ].join(' ')}
             >
-              {clue.map((v, k) => (
+              {(clue.length ? clue : [0]).map((v, k) => (
                 <span key={k}>{v}</span>
               ))}
             </div>
@@ -363,6 +374,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         </div>
       </div>
 
+      {won && puzzle.name && (
+        <p className={styles.reveal}>
+          It’s {article(puzzle.name)} <strong>{puzzle.name}</strong>!
+        </p>
+      )}
       {hint && !won && <HintBubble onDismiss={() => setHint(null)}>{hint.message}</HintBubble>}
 
       <ControlBar>

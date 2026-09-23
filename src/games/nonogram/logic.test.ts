@@ -69,3 +69,21 @@ describe('hints', () => {
     expect(isSolved(p, board)).toBe(true);
   });
 });
+
+describe('picture library', async () => {
+  const { PICTURES } = await import('./pictures');
+  for (const n of Object.keys(PICTURES).map(Number)) {
+    it(`${n}x${n}: seeds pick named, line-solvable pictures with variety`, () => {
+      expect(generateNonogram(n, 99, PICTURES[n])).toEqual(generateNonogram(n, 99, PICTURES[n]));
+      const names = new Set<string>();
+      for (let seed = 1; seed <= 300; seed++) {
+        const p = generateNonogram(n, seed, PICTURES[n]);
+        expect(p.name).toBeTruthy();
+        names.add(p.name!);
+        const known = lineSolve(p);
+        expect(known!.every((k, i) => k === p.solution[i])).toBe(true);
+      }
+      expect(names.size).toBeGreaterThan(Math.min(25, PICTURES[n].length * 0.6));
+    });
+  }
+});
