@@ -194,5 +194,3 @@ export function closeness(guess: string, cat: Scorable, near: readonly string[])
   const pct = Math.max(1, Math.min(WRONG_CAP, Math.round(relatedness(guess, cat, near) * 100)));
   return { pct, temp: temperature(pct) };
 }
-
-export const TEMP_LABEL: Record<Temperature, string> = { correct: 'Correct', hot: 'Hot', warm: 'Warm', cold: 'Cold' };

@@ -7,6 +7,7 @@ import type { WordLength } from './data';
 import { generateLadder, MIDDLE, oneApart, RUNGS } from './generator';
 import { computePhase, forwardOrder, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
 import { Keyboard } from './Keyboard';
+import { STR } from './i18n';
 import styles from './Game.module.css';
 
 /** Vertical gap between rungs in px (mirrored by --cc-gap in the CSS module). */
@@ -37,7 +38,8 @@ function dragTarget(d: DragState): number {
   return Math.max(0, Math.min(MIDDLE - 1, Math.round(d.from + d.dy / d.pitch)));
 }
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const length: WordLength = options.length === '5' ? 5 : 4;
   const N = length;
   const ladder = useMemo(() => generateLadder(seed, length), [seed, length]);
@@ -201,7 +203,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         // Whole-word verdict only: letters stay as typed and no position is singled out.
         setFlagged(w);
         setSel({ w, c: sel.w === w ? sel.c : firstEmptyCol(w) });
-        setNote("This word isn't right.");
+        setNote(t.wrongWord);
         return;
       }
       const c = act.col;
@@ -223,7 +225,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       if (pick === null) return;
       setFlagged(pick);
       setSel({ w: pick, c: 0 });
-      setNote("This row doesn't belong here. Try moving it.");
+      setNote(t.misplacedRow);
       onHint();
     }
   };
@@ -271,7 +273,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     setFlagged(null);
     if (phase === 'order') setNote(null);
     if (phase === 'final') {
-      setNote(from === 'clues' ? 'All the words are correct and already in order!' : null);
+      setNote(from === 'clues' ? t.alreadyInOrder : null);
       // The end pair reads top-to-bottom (e.g. FIRE over WORK), so a reversed ladder flips upright.
       const fwd = forwardOrder(order);
       if (fwd[0] !== order[0]) setOrder(fwd);
@@ -283,10 +285,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       celebrate();
       onComplete({
         won: true,
-        share: `🪜 Crossclimb ${length} letters`,
+        share: t.share(length),
         summary: (
           <div className={styles.summary}>
-            <span className={styles.summaryLabel}>The ladder</span>
+            <span className={styles.summaryLabel}>{t.theLadder}</span>
             <div className={styles.summaryWords}>
               {seqWords.map((w, i) => (
                 <span key={i}>{w}</span>
@@ -375,7 +377,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             e.stopPropagation();
             selectCell(w, c);
           }}
-          aria-label={ch ? `Letter ${c + 1}: ${ch}` : `Letter ${c + 1}: empty`}
+          aria-label={t.letter(c + 1, ch)}
         >
           {ch}
         </div>
@@ -407,7 +409,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         }}
         className={cx(styles.row, styles.endRow, !unlocked && styles.rowLocked, unlocked && styles.rowUnlock, isSel && styles.rowSel, done && styles.rowSolved)}
         onClick={() => w !== null && selectCell(w, sel.w === w ? sel.c : firstEmptyCol(w))}
-        aria-label={unlocked ? `${slot === 'T' ? 'Top' : 'Bottom'} rung${done ? ', solved' : ''}` : `${slot === 'T' ? 'Top' : 'Bottom'} rung, locked`}
+        aria-label={t.endRung(slot === 'T', !unlocked ? 'locked' : done ? 'solved' : 'open')}
       >
         <span className={styles.side}>{done && <Check size={18} />}</span>
         <div className={styles.cells}>{renderCells(w, isSel)}</div>
@@ -420,16 +422,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (phase === 'order')
       return (
         <>
-          <strong className={styles.clueStrong}>All the words are correct — now drag them into the right order</strong>
-          {!note && <span className={styles.clueSub}>Neighbors must differ by exactly one letter</span>}
+          <strong className={styles.clueStrong}>{t.orderTitle}</strong>
+          {!note && <span className={styles.clueSub}>{t.orderSub}</span>}
         </>
       );
-    if (phase === 'done') return <strong className={styles.clueStrong}>You climbed the whole ladder!</strong>;
+    if (phase === 'done') return <strong className={styles.clueStrong}>{t.climbed}</strong>;
     if (phase === 'final') {
       // One shared clue for both end rungs, whichever of the two is selected.
       return (
         <>
-          <span className={styles.clueLabel}>Top + bottom</span>
+          <span className={styles.clueLabel}>{t.topBottom}</span>
           <span className={styles.clueText}>{endClue}</span>
         </>
       );
@@ -444,7 +446,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     <div className={cx(styles.wrap, phase === 'done' && styles.won)} style={ladderStyle}>
       <div className={styles.clueCard} aria-live="polite">
         {showArrows && (
-          <button type="button" className={styles.arrow} onClick={() => stepRow(-1)} aria-label="Previous clue" disabled={paused}>
+          <button type="button" className={styles.arrow} onClick={() => stepRow(-1)} aria-label={t.prevClue} disabled={paused}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M15 5l-7 7 7 7" />
             </svg>
@@ -459,7 +461,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           )}
         </div>
         {showArrows && (
-          <button type="button" className={styles.arrow} onClick={() => stepRow(1)} aria-label="Next clue" disabled={paused}>
+          <button type="button" className={styles.arrow} onClick={() => stepRow(1)} aria-label={t.nextClue} disabled={paused}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M9 5l7 7-7 7" />
             </svg>
@@ -467,7 +469,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         )}
       </div>
 
-      <div className={styles.ladder} role="group" aria-label="Word ladder">
+      <div className={styles.ladder} role="group" aria-label={t.wordLadder}>
         {renderEnd('T')}
         <div className={styles.middle}>
           {MIDS.map((w) => {
@@ -498,7 +500,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                 style={style}
                 onClick={() => selectCell(w, sel.w === w ? sel.c : editable(w) ? firstEmptyCol(w) : 0)}
                 {...(phase === 'order' ? dragHandlers(w) : {})}
-                aria-label={`Rung ${slot + 2}${done ? ', solved' : ''}`}
+                aria-label={t.midRung(slot + 2, done)}
               >
                 <span className={styles.side}>{done && <Check size={18} />}</span>
                 <div className={styles.cells}>{renderCells(w, isSel)}</div>
@@ -507,7 +509,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                     <button
                       type="button"
                       className={styles.handle}
-                      aria-label="Drag to reorder"
+                      aria-label={t.dragToReorder}
                       tabIndex={-1}
                       onClick={(e) => e.stopPropagation()}
                       {...(phase === 'clues' ? dragHandlers(w) : {})}
@@ -534,14 +536,14 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       <ControlBar>
         {phase === 'order' && (
           <>
-            <ControlButton label="Up" icon={<span aria-hidden>↑</span>} onClick={() => moveSelected(-1)} disabled={paused || order.indexOf(sel.w) <= 0} />
-            <ControlButton label="Down" icon={<span aria-hidden>↓</span>} onClick={() => moveSelected(1)} disabled={paused || order.indexOf(sel.w) >= MIDDLE - 1} />
+            <ControlButton label={t.up} icon={<span aria-hidden>↑</span>} onClick={() => moveSelected(-1)} disabled={paused || order.indexOf(sel.w) <= 0} />
+            <ControlButton label={t.down} icon={<span aria-hidden>↓</span>} onClick={() => moveSelected(1)} disabled={paused || order.indexOf(sel.w) >= MIDDLE - 1} />
           </>
         )}
-        <ControlButton label="Hint" icon={<Bulb size={18} />} onClick={hint} disabled={paused || phase === 'done'} />
+        <ControlButton label={t.hint} icon={<Bulb size={18} />} onClick={hint} disabled={paused || phase === 'done'} />
       </ControlBar>
 
-      <Keyboard disabled={paused || !(phase === 'clues' || phase === 'final')} onKey={(k) => onKey(k)} />
+      <Keyboard labels={t} disabled={paused || !(phase === 'clues' || phase === 'final')} onKey={(k) => onKey(k)} />
     </div>
   );
 }

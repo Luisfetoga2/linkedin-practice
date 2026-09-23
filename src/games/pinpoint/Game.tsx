@@ -4,8 +4,9 @@ import { Check, Close } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
 import { CLUE_COUNT, displayWord, generatePuzzle } from './generator';
 import { clean, isMatch, isMeaningful } from './match';
-import { closeness, TEMP_LABEL, type Closeness } from './closeness';
+import { closeness, type Closeness } from './closeness';
 import { nearFor } from './near';
+import { STR } from './i18n';
 import styles from './Game.module.css';
 
 interface Attempt {
@@ -26,7 +27,8 @@ function Lock() {
   );
 }
 
-export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
+export default function Game({ seed, lang, paused, onReady, onComplete }: GameProps) {
+  const t = STR[lang];
   const puzzle = useMemo(() => generatePuzzle(seed), [seed]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [status, setStatus] = useState<Status>('playing');
@@ -82,10 +84,10 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
       summary: (
         <div className={styles.summary}>
           <p>
-            {won ? 'Category' : 'The answer was'}: <strong>{puzzle.category.name}</strong>
+            {won ? t.category : t.answerWas}: <strong>{puzzle.category.name}</strong>
           </p>
           <p className={styles.summaryWords}>{puzzle.clues.map(displayWord).join(' · ')}</p>
-          <ol className={styles.summaryGuesses} aria-label="How close your guesses were">
+          <ol className={styles.summaryGuesses} aria-label={t.howCloseAria}>
             {next.map((a, i) => (
               <li key={i}>
                 <span className={styles.summaryGuess}>{a.text}</span> —{' '}
@@ -103,16 +105,16 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
     if (locked) return;
     const guess = text.trim().replace(/\s+/g, ' ');
     if (clean(guess).replace(/ /g, '').length < 2) {
-      toast('Guess is too short');
+      toast(t.tooShort);
       return;
     }
     if (!isMeaningful(guess)) {
-      toast('Try something more specific');
+      toast(t.tooVague);
       return;
     }
     const key = clean(guess);
     if (attempts.some((a) => clean(a.text) === key)) {
-      toast('Already guessed');
+      toast(t.alreadyGuessed);
       return;
     }
     const correct = isMatch(guess, puzzle.category);
@@ -138,7 +140,7 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
 
   return (
     <div className={`${styles.wrap}${status === 'won' ? ` ${styles.won}` : ''}${status === 'lost' ? ` ${styles.lost}` : ''}`}>
-      <ol className={styles.stack} aria-label="Clues">
+      <ol className={styles.stack} aria-label={t.clues}>
         {puzzle.clues.map((word, i) => {
           const open = i < revealed;
           const delay = done && i >= cascadeFrom ? (i - cascadeFrom) * CASCADE_MS : 0;
@@ -148,13 +150,13 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
                 key={open ? 'open' : 'closed'}
                 className={`${styles.card} ${styles[`c${i}`]} ${open ? styles.open : styles.closed}`}
                 style={{ animationDelay: `${delay}ms` }}
-                aria-label={open ? `Clue ${i + 1}: ${word}` : `Clue ${i + 1}, hidden`}
+                aria-label={open ? t.clueOpen(i + 1, word) : t.clueHidden(i + 1)}
               >
                 {open ? (
                   <span className={styles.word}>{displayWord(word)}</span>
                 ) : (
                   <span className={styles.placeholder}>
-                    <Lock /> Clue {i + 1}
+                    <Lock /> {t.clueLabel(i + 1)}
                   </span>
                 )}
               </div>
@@ -165,7 +167,7 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
 
       {done && (
         <div className={`${styles.banner} ${status === 'won' ? styles.bannerWin : styles.bannerLose}`} role="status">
-          <span className={styles.bannerLabel}>{status === 'won' ? 'You pinpointed it' : 'The answer was'}</span>
+          <span className={styles.bannerLabel}>{status === 'won' ? t.youPinpointed : t.answerWas}</span>
           <span className={styles.bannerName}>
             {puzzle.category.name}
             {status === 'won' && <Check size={20} />}
@@ -182,8 +184,8 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onFocus={onFocus}
-              placeholder="Guess the category"
-              aria-label="Guess the category"
+              placeholder={t.placeholder}
+              aria-label={t.placeholder}
               maxLength={48}
               disabled={paused}
               autoComplete="off"
@@ -192,21 +194,21 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
               spellCheck={false}
               enterKeyHint="go"
             />
-            <button className={styles.submit} type="submit" disabled={paused || !text.trim()} aria-label="Submit guess">
+            <button className={styles.submit} type="submit" disabled={paused || !text.trim()} aria-label={t.submitGuess}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
           </div>
           <p className={styles.left} aria-live="polite">
-            {left} {left === 1 ? 'guess' : 'guesses'} left
+            {t.guessesLeft(left)}
           </p>
         </form>
       )}
 
       {attempts.length > 0 && (
-        <section className={`${styles.guesses}${scores ? ` ${styles.guessesDone}` : ''}`} aria-label="Your guesses">
-          <h2 className={styles.guessesTitle}>{scores ? 'How close you were' : 'Your guesses'}</h2>
+        <section className={`${styles.guesses}${scores ? ` ${styles.guessesDone}` : ''}`} aria-label={t.yourGuesses}>
+          <h2 className={styles.guessesTitle}>{scores ? t.howClose : t.yourGuesses}</h2>
           <ol className={styles.guessList}>
             {attempts.map((a, i) => {
               const c = scores?.[i];
@@ -220,7 +222,7 @@ export default function Game({ seed, paused, onReady, onComplete }: GameProps) {
                         <span className={styles.meterFill} style={{ width: `${c.pct}%` }} />
                       </span>
                       <span className={styles.pct}>{c.pct}%</span>
-                      <span className={styles.temp}>{TEMP_LABEL[c.temp]}</span>
+                      <span className={styles.temp}>{t.temp[c.temp]}</span>
                     </span>
                   )}
                 </li>

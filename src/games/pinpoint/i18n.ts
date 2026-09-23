@@ -1,0 +1,43 @@
+import { defineStrings } from '../../lib/i18n';
+import type { Temperature } from './closeness';
+
+export const STR = defineStrings(
+  {
+    clues: 'Clues',
+    clueOpen: (n: number, word: string) => `Clue ${n}: ${word}`,
+    clueHidden: (n: number) => `Clue ${n}, hidden`,
+    clueLabel: (n: number) => `Clue ${n}`,
+    placeholder: 'Guess the category',
+    submitGuess: 'Submit guess',
+    guessesLeft: (n: number) => `${n} ${n === 1 ? 'guess' : 'guesses'} left`,
+    tooShort: 'Guess is too short',
+    tooVague: 'Try something more specific',
+    alreadyGuessed: 'Already guessed',
+    youPinpointed: 'You pinpointed it',
+    answerWas: 'The answer was',
+    category: 'Category',
+    yourGuesses: 'Your guesses',
+    howClose: 'How close you were',
+    howCloseAria: 'How close your guesses were',
+    temp: { correct: 'Correct', hot: 'Hot', warm: 'Warm', cold: 'Cold' } as Record<Temperature, string>,
+  },
+  {
+    clues: 'Pistas',
+    clueOpen: (n: number, word: string) => `Pista ${n}: ${word}`,
+    clueHidden: (n: number) => `Pista ${n}, oculta`,
+    clueLabel: (n: number) => `Pista ${n}`,
+    placeholder: 'Adivina la categoría',
+    submitGuess: 'Enviar intento',
+    guessesLeft: (n: number) => (n === 1 ? 'Te queda 1 intento' : `Te quedan ${n} intentos`),
+    tooShort: 'El intento es muy corto',
+    tooVague: 'Prueba con algo más específico',
+    alreadyGuessed: 'Ya intentaste eso',
+    youPinpointed: '¡Diste en el clavo!',
+    answerWas: 'La respuesta era',
+    category: 'Categoría',
+    yourGuesses: 'Tus intentos',
+    howClose: 'Qué tan cerca estuviste',
+    howCloseAria: 'Qué tan cerca estuvieron tus intentos',
+    temp: { correct: 'Acierto', hot: 'Caliente', warm: 'Tibio', cold: 'Frío' },
+  },
+);

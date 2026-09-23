@@ -15,23 +15,38 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'pinpoint',
   name: 'Pinpoint',
-  tagline: 'Guess the category',
+  tagline: { en: 'Guess the category', es: 'Adivina la categoría' },
   color: '#1a6ff2',
   colorEnd: '#0a45b8',
   tint: '#e0efff',
   scoring: 'guesses',
   maxGuesses: 5,
   hasHints: false,
+  contentLanguages: ['en'],
   Icon,
-  howToPlay: (
-    <>
-      <p>Five clue words all belong to one hidden category. Pinpoint it in as few guesses as you can.</p>
-      <ul>
-        <li>You start with one clue. Type the category and press Enter.</li>
-        <li>Each wrong guess reveals the next clue. You have 5 guesses.</li>
-        <li>Close answers count — “keys” works for <em>Things with keys</em>.</li>
-        <li>When the round ends, see how close each of your guesses was to the category.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Five clue words all belong to one hidden category. Pinpoint it in as few guesses as you can.</p>
+        <ul>
+          <li>You start with one clue. Type the category and press Enter.</li>
+          <li>Each wrong guess reveals the next clue. You have 5 guesses.</li>
+          <li>Close answers count — “keys” works for <em>Things with keys</em>.</li>
+          <li>When the round ends, see how close each of your guesses was to the category.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Cinco palabras clave pertenecen a una categoría oculta. Descúbrela con la menor cantidad de intentos posible.</p>
+        <p>Por ahora, las palabras y las categorías están en inglés, así que escribe tus respuestas en inglés.</p>
+        <ul>
+          <li>Empiezas con una pista. Escribe la categoría y presiona Enter.</li>
+          <li>Cada intento fallido revela la siguiente pista. Tienes 5 intentos.</li>
+          <li>Las respuestas aproximadas cuentan: “keys” sirve para <em>Things with keys</em>.</li>
+          <li>Al terminar la ronda, verás qué tan cerca estuvo cada uno de tus intentos de la categoría.</li>
+        </ul>
+      </>
+    ),
+  },
 };
