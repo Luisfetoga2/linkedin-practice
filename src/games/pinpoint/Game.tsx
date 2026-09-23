@@ -207,7 +207,15 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
     // Some browsers resize the visual viewport before focus lands; re-check after the keyboard animates in.
     window.setTimeout(() => window.visualViewport?.dispatchEvent(new Event('resize')), 350);
   };
-  const onBlur = () => setKbOpen(false);
+  // Delay so a tap that briefly moves focus doesn't reshuffle the layout under the finger.
+  const onBlur = () =>
+    window.setTimeout(() => {
+      if (document.activeElement !== inputRef.current) setKbOpen(false);
+    }, 250);
+  /** Buttons next to the input must not steal focus, or the keyboard closes before the tap lands. */
+  const keepFocus = (e: { preventDefault(): void }) => {
+    if (document.activeElement === inputRef.current) e.preventDefault();
+  };
 
   return (
     <div className={`${styles.wrap}${status === 'won' ? ` ${styles.won}` : ''}${status === 'lost' ? ` ${styles.lost}` : ''}${kbOpen ? ` ${styles.kbOpen}` : ''}`}>
@@ -266,7 +274,14 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
               spellCheck={false}
               enterKeyHint="go"
             />
-            <button className={styles.submit} type="submit" disabled={paused || !text.trim()} aria-label={t.submitGuess}>
+            <button
+              className={styles.submit}
+              type="submit"
+              disabled={paused || !text.trim()}
+              aria-label={t.submitGuess}
+              onPointerDown={keepFocus}
+              onMouseDown={keepFocus}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
@@ -279,7 +294,8 @@ function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps &
             <button
               type="button"
               className={styles.skip}
-              onMouseDown={(e) => e.preventDefault()}
+              onPointerDown={keepFocus}
+              onMouseDown={keepFocus}
               onClick={skip}
               disabled={paused || revealed >= CLUE_COUNT}
               title={t.skipTitle}
