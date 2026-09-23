@@ -421,3 +421,19 @@
     padding: 2.5px;
   }
 }
+
+/* Spanish labels ("Deshacer") are longer: keep the icons and tighten the controls on phones. */
+.longLabels :global(.lp-controls) {
+  width: 100%;
+  max-width: min(var(--board-max), 400px);
+}
+.longLabels :global(.lp-control svg) {
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .longLabels :global(.lp-control) {
+    padding: 0 8px;
+    gap: 4px;
+    font-size: 14px;
+  }
+}

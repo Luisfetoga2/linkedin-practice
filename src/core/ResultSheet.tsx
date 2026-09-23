@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { GameMeta, GameResult } from './types';
+import { statsVariant, type GameMeta, type GameResult } from './types';
 import { Modal } from './components/Modal';
 import { Chart, Clock, Share } from './components/Icons';
 import { computeStats, useHistory, variantKey } from '../lib/stats';
@@ -24,7 +24,7 @@ export function ResultSheet({ open, meta, round, onClose, onPlayAgain }: { open:
   const history = useHistory(meta.id);
   const { t, lang } = useCore();
   const name = pick(meta.name, lang);
-  const variant = variantKey(round.options);
+  const variant = variantKey(statsVariant(meta, round.options));
   const stats = useMemo(() => computeStats(history, variant), [history, variant]);
   const [bestHeadline] = useState(() => round.isBest && stats.played > 1);
   const headline = bestHeadline ? t.newBest : t.winLines[round.seed % t.winLines.length];

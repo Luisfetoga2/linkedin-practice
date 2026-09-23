@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import type { GameEntry, GameProps, GameResult, GameSettingDef } from './types';
+import { statsVariant, type GameEntry, type GameProps, type GameResult, type GameSettingDef } from './types';
 import { Stopwatch } from './stopwatch';
 import { Timer } from './components/Timer';
 import { ArrowLeft, Chart, Gear, Help, Play, Shuffle } from './components/Icons';
@@ -52,7 +52,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   const hints = useRef(0);
   const completed = useRef(false);
   const history = useHistory(meta.id);
-  const variant = variantKey(options);
+  const variant = variantKey(statsVariant(meta, options));
   const stats = useMemo(() => computeStats(history, variant), [history, variant]);
 
   // Warm the game chunk while the intro is showing.

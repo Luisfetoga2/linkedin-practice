@@ -27,23 +27,98 @@ export const SIZE_CONFIG: Record<number, SizeConfig> = {
   6: { lengths: [4, 5, 6, 7, 8], walls: 6 },
 };
 
-let hiddenCache: Record<number, string[]> | null = null;
-export function hiddenWords(len: number): string[] {
-  if (!hiddenCache) {
-    hiddenCache = {};
-    for (const k of Object.keys(HIDDEN_WORDS)) hiddenCache[+k] = HIDDEN_WORDS[+k].split(' ');
-  }
-  return hiddenCache[len] ?? [];
+/** Language of the puzzle's words (the "Words" option), independent of the UI language. */
+export type WordLang = 'en' | 'es';
+
+/** Raw word data, as exported by words.ts / words.es.ts. */
+export interface WordLists {
+  /** Space-separated lower-case words per length. */
+  HIDDEN_WORDS: Record<number, string>;
+  /** Space-separated lower-case words that are real words but not hidden-word candidates. */
+  VALID_WORDS: string;
 }
 
-let validCache: Set<string> | null = null;
-/** Is `word` (any case) a real English word, for the "Not in word list" message. */
+/** The word pool a puzzle is built from (English or Spanish). */
+export interface Lexicon {
+  /** Hidden-word candidates of length `len`, lower case, in frequency order. */
+  hiddenWords(len: number): string[];
+  /** Is `word` (any case, tile alphabet) a real word, for the "Not one of the hidden words" message. */
+  isValidWord(word: string): boolean;
+}
+
+export function makeLexicon(lists: WordLists): Lexicon {
+  let hiddenCache: Record<number, string[]> | null = null;
+  let validCache: Set<string> | null = null;
+  const hidden = () => {
+    if (!hiddenCache) {
+      hiddenCache = {};
+      for (const k of Object.keys(lists.HIDDEN_WORDS)) hiddenCache[+k] = lists.HIDDEN_WORDS[+k].split(' ');
+    }
+    return hiddenCache;
+  };
+  return {
+    hiddenWords: (len) => hidden()[len] ?? [],
+    isValidWord: (word) => {
+      if (!validCache) {
+        validCache = new Set(lists.VALID_WORDS.split(' '));
+        for (const ws of Object.values(hidden())) for (const w of ws) validCache.add(w);
+      }
+      return validCache.has(word.toLowerCase());
+    },
+  };
+}
+
+export const EN_LEXICON: Lexicon = makeLexicon({ HIDDEN_WORDS, VALID_WORDS });
+
+let esLexicon: Lexicon | null = null;
+let esLoading: Promise<Lexicon> | null = null;
+
+/** The lexicon for a word language when it's already in memory (English always is). */
+export function lexiconIfLoaded(lang: WordLang): Lexicon | null {
+  return lang === 'es' ? esLexicon : EN_LEXICON;
+}
+
+/** Load the lexicon for a word language; the Spanish data is its own chunk. */
+export function loadLexicon(lang: WordLang): Promise<Lexicon> {
+  if (lang === 'en') return Promise.resolve(EN_LEXICON);
+  if (esLexicon) return Promise.resolve(esLexicon);
+  esLoading ??= import('./words.es').then(
+    (m) => (esLexicon = makeLexicon(m)),
+    (err) => {
+      esLoading = null;
+      throw err;
+    },
+  );
+  return esLoading;
+}
+
+/** English hidden-word candidates of length `len`. */
+export function hiddenWords(len: number): string[] {
+  return EN_LEXICON.hiddenWords(len);
+}
+
+/** Is `word` (any case) a real English word, for the "Not one of the hidden words" message. */
 export function isValidWord(word: string): boolean {
-  if (!validCache) {
-    validCache = new Set(VALID_WORDS.split(' '));
-    for (const k of Object.keys(HIDDEN_WORDS)) for (const w of HIDDEN_WORDS[+k].split(' ')) validCache.add(w);
-  }
-  return validCache.has(word.toLowerCase());
+  return EN_LEXICON.isValidWord(word);
+}
+
+/**
+ * Map typed text to the tile alphabet: upper case, accents dropped (Á→A, Ü→U), Ñ kept as its own
+ * letter.
+ */
+export function toTileLetters(text: string): string {
+  return text
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/N\u0303/g, '\u00d1')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/** The tile letter for a key press (A-Z or Ñ, accented vowels mapped to their base), or null. */
+export function keyToTileLetter(key: string): string | null {
+  if ([...key].length !== 1) return null;
+  const L = toTileLetters(key);
+  return /^[A-Z\u00d1]$/.test(L) ? L : null;
 }
 
 export function neighbors(size: number, i: number): number[] {
@@ -252,7 +327,7 @@ export function countTilings(size: number, letters: string[], words: string[], l
 
 // ---------------------------------------------------------------------------
 
-export function generatePuzzle(seed: number, size: number): WendPuzzle {
+export function generatePuzzle(seed: number, size: number, lexicon: Lexicon = EN_LEXICON): WendPuzzle {
   const cfg = SIZE_CONFIG[size] ?? SIZE_CONFIG[5];
   size = SIZE_CONFIG[size] ? size : 5;
   const rng = createRng(seed * 7919 + size);
@@ -268,7 +343,7 @@ export function generatePuzzle(seed: number, size: number): WendPuzzle {
       const taken = new Set<string>();
       const words: HiddenWord[] = [];
       for (const path of paths) {
-        const pool = hiddenWords(path.length);
+        const pool = lexicon.hiddenWords(path.length);
         let w = rng.pick(pool);
         for (let k = 0; k < 20 && taken.has(w); k++) w = rng.pick(pool);
         if (taken.has(w)) break;

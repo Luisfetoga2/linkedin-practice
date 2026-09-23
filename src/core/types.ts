@@ -80,3 +80,17 @@ export interface GameEntry {
   meta: GameMeta;
   load: () => Promise<{ default: ComponentType<GameProps> }>;
 }
+
+/**
+ * Stats bucket for a round. Language-following options at their default ('en') are left out, so
+ * rounds recorded before the option existed stay in the same bucket as new English rounds.
+ */
+export function statsVariant(meta: GameMeta, options: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(options)) {
+    const opt = meta.options?.find((o) => o.id === k);
+    if (opt?.followsLanguage && v === opt.default) continue;
+    out[k] = v;
+  }
+  return out;
+}

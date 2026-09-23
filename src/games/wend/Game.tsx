@@ -3,7 +3,17 @@ import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Check, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
-import { generatePuzzle, isValidWord, type FoundWord } from './generator';
+import { CORE } from '../../i18n/core';
+import {
+  generatePuzzle,
+  keyToTileLetter,
+  lexiconIfLoaded,
+  loadLexicon,
+  type FoundWord,
+  type Lexicon,
+  type WordLang,
+} from './generator';
+import { STR } from './i18n';
 import { planHint } from './hints';
 import {
   adjacent,
@@ -41,9 +51,29 @@ interface HintState {
   blocking: number[];
 }
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game(props: GameProps) {
+  const wordLang: WordLang = props.options.words === 'es' ? 'es' : 'en';
+  const [lexicon, setLexicon] = useState<Lexicon | null>(() => lexiconIfLoaded(wordLang));
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (lexicon) return;
+    let alive = true;
+    loadLexicon(wordLang).then(
+      (l) => alive && setLexicon(l),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [lexicon, wordLang]);
+  if (!lexicon) return <div className="lp-loading">{failed ? STR[props.lang].loadError : CORE[props.lang].loading}</div>;
+  return <Board {...props} lexicon={lexicon} />;
+}
+
+function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexicon }: GameProps & { lexicon: Lexicon }) {
+  const t = STR[lang];
   const size = options.size === '6' ? 6 : 5;
-  const puzzle = useMemo(() => generatePuzzle(seed, size), [seed, size]);
+  const puzzle = useMemo(() => generatePuzzle(seed, size, lexicon), [seed, size, lexicon]);
   const { letters, walls, words } = puzzle;
   const grid: Grid = useMemo(() => ({ size, walls }), [size, walls]);
   const n = size * size;
@@ -97,7 +127,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const ordered = [...all].sort((a, b) => a.w - b.w);
     onComplete({
       won: true,
-      share: `🧵 Wend ${words.length} words`,
+      share: t.share(words.length),
       summary: (
         <div className={styles.summary}>
           {ordered.map((f) => (
@@ -164,8 +194,8 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       const idx = next.length - 1;
       if (assignWords(next, letters, words)[idx] < 0) {
         const word = spell(final.active);
-        if (words.some((hw) => hw.word === word)) toast('Already found');
-        else if (isValidWord(word)) toast('Not one of the hidden words');
+        if (words.some((hw) => hw.word === word)) toast(t.alreadyFound);
+        else if (lexicon.isValidWord(word)) toast(t.notHidden);
       }
     }
   };
@@ -276,7 +306,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const r = planHint(puzzle, linesRef.current, revealed);
     if (r.kind === 'blocking') {
       setHint({
-        text: `${words[r.found.w].word} is a hidden word, but not there — it's blocking the rest. Draw through it to break it up.`,
+        text: t.blocking(words[r.found.w].word),
         blocking: r.found.path,
       });
       onHint();
@@ -291,17 +321,12 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       selectedRef.current = r.lines[r.lines.length - 1].at(-1) ?? null;
       onHint();
       if (foundWords(r.lines).length === words.length) return;
-      const main =
-        r.step + 1 === len
-          ? `That's the whole ${len}-letter word.`
-          : r.step === 0
-            ? `The ${len}-letter word starts on tile 1.`
-            : `Here's letter ${r.step + 1} of the ${len}-letter word.`;
-      const note = r.flipped ? ' Your line ran backwards, so it was flipped.' : r.cleared ? ' Wrong tiles were taken out of your lines.' : '';
+      const main = r.step + 1 === len ? t.wholeWord(len) : r.step === 0 ? t.startsOn(len) : t.letterOf(r.step + 1, len);
+      const note = r.flipped ? t.flipped : r.cleared ? t.cleared : '';
       setHint({ text: main + note, blocking: [] });
       return;
     }
-    setHint({ text: 'Trace the numbered tiles in order to spell the word.', blocking: [] });
+    setHint({ text: t.traceNumbered, blocking: [] });
   };
 
   // ---------------------------------------------------------------------------
@@ -367,8 +392,8 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       setStroke(null);
       return;
     }
-    if (/^[a-zA-Z]$/.test(key)) {
-      const L = key.toUpperCase();
+    const L = keyToTileLetter(key);
+    if (L) {
       if (s) {
         const head = headOf(s);
         const opts = [head - size, head + size, head - 1, head + 1].filter(
@@ -486,14 +511,14 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const hasLines = lines.length > 0;
 
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap}${lang === 'es' ? ` ${styles.longLabels}` : ''}`}>
       <div className={styles.bubbleRow} aria-live="polite">
         {traceWord ? (
           <div className={`${styles.bubble} ${assign[activeIdx] >= 0 ? `${styles.bubbleFound} ${colorOf(assign[activeIdx])}` : ''}`}>{traceWord}</div>
         ) : won ? (
-          <div className={`${styles.bubble} ${styles.bubbleDone}`}>All words found!</div>
+          <div className={`${styles.bubble} ${styles.bubbleDone}`}>{t.allFound}</div>
         ) : (
-          <div className={styles.bubbleIdle}>Drag across letters to spell a word</div>
+          <div className={styles.bubbleIdle}>{t.idle}</div>
         )}
       </div>
 
@@ -509,7 +534,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           onLostPointerCapture={onPointerCancel}
           onContextMenu={(e) => e.preventDefault()}
           role="grid"
-          aria-label={`Wend ${size} by ${size} letter grid`}
+          aria-label={t.gridLabel(size)}
         >
           <div className={styles.layer}>
             {letters.map((_, c) => (
@@ -537,7 +562,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                   key={`${pop?.key ?? 0}-${c}`}
                   className={styles.cell}
                   role="gridcell"
-                  aria-label={walls[c] ? 'wall' : `${l}${w >= 0 ? ', found' : lineOf[c] >= 0 ? ', drawn' : ''}`}
+                  aria-label={walls[c] ? t.wall : `${l}${w >= 0 ? t.cellFound : lineOf[c] >= 0 ? t.cellDrawn : ''}`}
                 >
                   <div className={cellClass(c, 'letter')} style={cellStyle(c)}>
                     {!walls[c] && <span className={styles.letter}>{l}</span>}
@@ -556,11 +581,11 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         </HintBubble>
       )}
 
-      <div className={styles.slots} aria-label="Hidden words">
+      <div className={styles.slots} aria-label={t.hiddenWords}>
         {words.map((hw, w) => {
           const isFound = foundSet.has(w);
           return (
-            <div key={w} className={`${styles.slotRow} ${isFound ? styles.slotFound : ''}`} aria-label={isFound ? hw.word : `${hw.word.length} letters`}>
+            <div key={w} className={`${styles.slotRow} ${isFound ? styles.slotFound : ''}`} aria-label={isFound ? hw.word : t.letters(hw.word.length)}>
               {[...hw.word].map((ch, i) => (
                 <span
                   key={i}
@@ -579,9 +604,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       </div>
 
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={inactive || history.length === 0} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={inactive} />
-        <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={inactive || !hasLines} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={inactive || history.length === 0} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={inactive} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={inactive || !hasLines} />
       </ControlBar>
     </div>
   );
