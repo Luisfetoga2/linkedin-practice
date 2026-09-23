@@ -1,0 +1,403 @@
+.wrap {
+  /* NYT-Mini palette: yellow cursor, light blue word. */
+  --mc-cell: #ffffff;
+  --mc-ink: #121212;
+  --mc-line: #1f1f1f;
+  --mc-block: #1f1f1f;
+  --mc-word: #a7d8ff;
+  --mc-sel: #ffda00;
+  --mc-bar: #dcefff;
+  --mc-right: #2860d8;
+  --mc-wrong: #d62d20;
+  --mc-reveal: #d62d20;
+  --mc-won: #d8f0de;
+  --mc-list-cur: #a7d8ff;
+  --mc-list-cross: #dcefff;
+  width: 100%;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  display: flex;
+  gap: 24px;
+}
+:global(:root[data-theme='dark']) .wrap {
+  --mc-cell: #2a2e33;
+  --mc-ink: #f3f3f3;
+  --mc-line: #0e0f11;
+  --mc-block: #0e0f11;
+  --mc-word: #29527a;
+  --mc-sel: #e0bd00;
+  --mc-bar: #1f3a55;
+  --mc-right: #7fb6ff;
+  --mc-wrong: #ff7a66;
+  --mc-reveal: #ff7a66;
+  --mc-won: #1f4a30;
+  --mc-list-cur: #29527a;
+  --mc-list-cross: #1f3346;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .wrap {
+    --mc-cell: #2a2e33;
+    --mc-ink: #f3f3f3;
+    --mc-line: #0e0f11;
+    --mc-block: #0e0f11;
+    --mc-word: #29527a;
+    --mc-sel: #e0bd00;
+    --mc-bar: #1f3a55;
+    --mc-right: #7fb6ff;
+    --mc-wrong: #ff7a66;
+    --mc-reveal: #ff7a66;
+    --mc-won: #1f4a30;
+    --mc-list-cur: #29527a;
+    --mc-list-cross: #1f3346;
+  }
+}
+
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- Grid ---------- */
+.board {
+  /* Shrinks on short screens so the clue bar and keyboard stay on screen. */
+  width: min(100%, max(250px, calc(100dvh - 430px)));
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  background: var(--mc-line);
+  border-radius: 6px;
+  container-type: inline-size;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.cell,
+.block {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.block {
+  background: var(--mc-block);
+}
+.cell {
+  display: grid;
+  place-items: center;
+  background: var(--mc-cell);
+  color: var(--mc-ink);
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.board > :first-child {
+  border-top-left-radius: 4px;
+}
+.inWord {
+  background: var(--mc-word);
+}
+.selected {
+  background: var(--mc-sel);
+  color: #121212;
+}
+.num {
+  position: absolute;
+  top: 3%;
+  left: 5%;
+  font-size: calc(100cqw / var(--n) * 0.24);
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.85;
+}
+.letter {
+  font-size: calc(100cqw / var(--n) * 0.54);
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(6%);
+}
+.right .letter {
+  color: var(--mc-right);
+}
+.selected.right .letter {
+  color: #1a47a8;
+}
+/* Wrong letters: a red slash across the square (Check word / Autocheck). */
+.wrong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--mc-wrong) calc(50% - 1.5px), var(--mc-wrong) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  pointer-events: none;
+}
+/* Revealed squares: a small triangle in the top-right corner. */
+.revealed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26%;
+  height: 26%;
+  background: var(--mc-reveal);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  pointer-events: none;
+}
+.revealed .letter {
+  color: var(--mc-right);
+}
+.selected.revealed .letter {
+  color: #1a47a8;
+}
+.won .cell {
+  background: var(--mc-won);
+  cursor: default;
+}
+
+/* ---------- Clue bar ---------- */
+.clueBar {
+  display: flex;
+  align-items: stretch;
+  min-height: 58px;
+  border-radius: var(--radius-lg);
+  background: var(--mc-bar);
+  color: var(--text);
+  overflow: hidden;
+}
+.arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+.arrow:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.clueBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.clueBody:disabled,
+.arrow:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.clueNum {
+  flex: none;
+  font-size: 15px;
+  font-weight: 800;
+}
+.clueText {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* ---------- Clue lists (wide screens only) ---------- */
+.lists {
+  display: none;
+}
+.listSection {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.listTitle {
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.listItem {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 10px;
+  border: 0;
+  border-left: 4px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: left;
+}
+.listItem:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.listItem:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.listCur,
+.listCur:hover:not(:disabled) {
+  background: var(--mc-list-cur);
+}
+.listCross {
+  border-left-color: var(--mc-list-cur);
+}
+.listDone .listText {
+  color: var(--text-2);
+}
+.listNum {
+  flex: none;
+  min-width: 18px;
+  font-weight: 800;
+}
+
+@media (min-width: 900px) {
+  .wrap {
+    /* Break out of the narrow play column to fit the clue lists beside the grid. */
+    --mc-w: min(880px, calc(100vw - 64px));
+    width: var(--mc-w);
+    max-width: none;
+    margin-left: calc(50% - var(--mc-w) / 2);
+  }
+  .main {
+    flex: 0 0 440px;
+  }
+  .board {
+    width: min(100%, max(300px, calc(100dvh - 400px)));
+  }
+  .lists {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-top: 2px;
+  }
+}
+
+/* ---------- Keyboard ---------- */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.2s;
+}
+.kbDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.kbRow {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 44px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  touch-action: manipulation;
+  transition: background-color 0.1s, transform 0.08s;
+}
+.key:hover {
+  background: color-mix(in srgb, var(--surface-3) 80%, var(--text) 8%);
+}
+.key:active {
+  transform: scale(0.95);
+}
+.keyWide {
+  flex: 1.6 1 0;
+  max-width: 70px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+@media (max-width: 480px) {
+  .key {
+    height: 46px;
+  }
+}
+@media (max-height: 700px) {
+  .key {
+    height: 42px;
+  }
+}
+
+/* ---------- Results summary ---------- */
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.summaryLabel {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--n), 26px);
+  gap: 2px;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--grid-line-strong);
+}
+.summaryGrid span {
+  display: grid;
+  place-items: center;
+  height: 26px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+.summaryGrid .summaryBlock {
+  background: var(--grid-line-strong);
+}
+
+/* Hint buttons: room for longer Spanish labels ("Revisar palabra") on one line at 360px. */
+.main :global(.lp-control) {
+  max-width: 200px;
+  padding: 0 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+@media (max-width: 370px) {
+  .main :global(.lp-control) {
+    gap: 4px;
+    font-size: 13px;
+  }
+}
