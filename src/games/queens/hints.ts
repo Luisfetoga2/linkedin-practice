@@ -1,3 +1,4 @@
+import { STR, type QueensStrings } from './i18n';
 import type { Puzzle } from './puzzle';
 import type { Solver, Technique } from './solver';
 
@@ -20,20 +21,20 @@ export interface Hint {
 
 /**
  * LinkedIn-style hint: first point out a mistake (a queen off the unique solution, or an ✕ covering a solution
- * cell), otherwise explain the next logical deduction. Falls back to revealing a queen.
+ * cell), otherwise explain the next logical deduction. Falls back to revealing a queen. `t` picks the language.
  */
-export function getHint(puzzle: Puzzle, solver: Solver, board: ArrayLike<number>): Hint | null {
+export function getHint(puzzle: Puzzle, solver: Solver, board: ArrayLike<number>, t: QueensStrings = STR.en): Hint | null {
   const n = puzzle.size;
   const isSolution = (i: number) => puzzle.solution[Math.floor(i / n)] === i % n;
 
   for (let i = 0; i < n * n; i++) {
     if (board[i] === QUEEN && !isSolution(i)) {
-      return { kind: 'wrong-queen', message: 'This queen is in the wrong place.', targets: [i], focus: [i], action: 'clear' };
+      return { kind: 'wrong-queen', message: t.wrongQueen, targets: [i], focus: [i], action: 'clear' };
     }
   }
   for (let i = 0; i < n * n; i++) {
     if (board[i] === CROSS && isSolution(i)) {
-      return { kind: 'wrong-cross', message: 'A queen belongs where you placed an ✕.', targets: [i], focus: [i], action: 'clear' };
+      return { kind: 'wrong-cross', message: t.wrongCross, targets: [i], focus: [i], action: 'clear' };
     }
   }
 
@@ -44,7 +45,7 @@ export function getHint(puzzle: Puzzle, solver: Solver, board: ArrayLike<number>
     return {
       kind: 'step',
       technique: step.technique,
-      message: step.message,
+      message: t.step(step.msg),
       targets: step.targets,
       focus: step.focus,
       action: step.kind === 'place' ? 'queen' : 'cross',
@@ -55,7 +56,7 @@ export function getHint(puzzle: Puzzle, solver: Solver, board: ArrayLike<number>
   for (let r = 0; r < n; r++) {
     const cell = r * n + puzzle.solution[r];
     if (board[cell] !== QUEEN) {
-      return { kind: 'reveal', message: 'Here is where a queen goes.', targets: [cell], focus: [cell], action: 'queen' };
+      return { kind: 'reveal', message: t.reveal, targets: [cell], focus: [cell], action: 'queen' };
     }
   }
   return null;

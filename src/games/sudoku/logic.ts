@@ -1,4 +1,5 @@
 import { createRng, type Rng } from '../../lib/rng';
+import type { StepMsg } from './i18n';
 
 export const N = 6;
 export const CELLS = N * N;
@@ -158,7 +159,8 @@ export interface Placement {
   technique: Technique;
   /** House index that explains the placement (for highlighting), if any. */
   house: number | null;
-  message: string;
+  /** Structured explanation; format it with STR[lang].step(). */
+  msg: StepMsg;
 }
 
 export interface Elimination {
@@ -169,7 +171,8 @@ export interface Elimination {
   /** Cells forming the pattern (pair cells, pointing cells). */
   pattern: number[];
   house: number;
-  message: string;
+  /** Structured explanation; format it with STR[lang].step(). */
+  msg: StepMsg;
 }
 
 export type Step = Placement | Elimination;
@@ -200,7 +203,7 @@ function findPlacement(values: ArrayLike<number>, cand: number[], maxRank: numbe
       digit,
       technique: 'fullHouse',
       house: h,
-      message: `This is the last empty cell in the highlighted ${houseName(h)}, so it must be ${digit}.`,
+      msg: { key: 'fullHouse', kind: houseName(h), digit },
     };
   }
   // Naked single.
@@ -213,7 +216,7 @@ function findPlacement(values: ArrayLike<number>, cand: number[], maxRank: numbe
       digit,
       technique: 'nakedSingle',
       house: null,
-      message: `The row, column and box of this cell already rule out every number except ${digit}.`,
+      msg: { key: 'nakedSingle', digit },
     };
   }
   if (maxRank < 2) return null;
@@ -231,7 +234,7 @@ function findPlacement(values: ArrayLike<number>, cand: number[], maxRank: numbe
         digit: d,
         technique: 'hiddenSingle',
         house: h,
-        message: `${d} can only go in this cell in the highlighted ${houseName(h)}.`,
+        msg: { key: 'hiddenSingle', kind: houseName(h), digit: d },
       };
     }
   }
@@ -260,7 +263,7 @@ function findElimination(values: ArrayLike<number>, cand: number[]): Elimination
           removals,
           pattern: spots,
           house: b,
-          message: `In the highlighted box, ${d} must go in this ${kind}, so it can't go anywhere else in the ${kind}.`,
+          msg: { key: 'pointing', line: kind, digit: d },
         };
       }
     }
@@ -280,7 +283,7 @@ function findElimination(values: ArrayLike<number>, cand: number[]): Elimination
         removals,
         pattern: spots,
         house: l,
-        message: `In the highlighted ${houseName(l)}, ${d} must go inside one box, so it can't go anywhere else in that box.`,
+        msg: { key: 'claiming', kind: houseName(l), digit: d },
       };
     }
   }
@@ -303,7 +306,7 @@ function findElimination(values: ArrayLike<number>, cand: number[]): Elimination
           removals,
           pattern: [cells[a], cells[b]],
           house: h,
-          message: `The two highlighted cells can only be ${x} or ${y}, so no other cell in the ${houseName(h)} can be ${x} or ${y}.`,
+          msg: { key: 'nakedPair', kind: houseName(h), x, y },
         };
       }
     }
@@ -327,7 +330,7 @@ function findElimination(values: ArrayLike<number>, cand: number[]): Elimination
           removals,
           pattern: wx,
           house: h,
-          message: `In the highlighted ${houseName(h)}, ${x} and ${y} can only go in these two cells, so nothing else fits there.`,
+          msg: { key: 'hiddenPair', kind: houseName(h), x, y },
         };
       }
     }

@@ -9,7 +9,8 @@
  *  4. group    — k regions confined to k lines (or k lines to k regions / k columns), k >= 2.
  *  5. chain    — a queen on a cell forces a short chain of singles that leaves some unit empty.
  */
-import { REGION_NAMES, colOf, rowOf } from './puzzle';
+import type { StepMsg } from './i18n';
+import { colOf, rowOf } from './puzzle';
 
 export type UnitType = 'row' | 'col' | 'region';
 export type Technique = 'single' | 'confine' | 'block' | 'group' | 'chain';
@@ -26,7 +27,8 @@ export interface Step {
   targets: number[];
   /** Cells that explain the deduction (highlighted, the rest of the board is dimmed). */
   focus: number[];
-  message: string;
+  /** Structured explanation; format it with STR[lang].step(). */
+  msg: StepMsg;
   technique: Technique;
 }
 
@@ -56,24 +58,6 @@ function popcount(x: number): number {
     c++;
   }
   return c;
-}
-
-function joinList(items: string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-}
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-export function unitName(u: { type: UnitType; index: number }): string {
-  if (u.type === 'region') return `the ${REGION_NAMES[u.index] ?? `#${u.index + 1}`} region`;
-  return `${u.type === 'row' ? 'row' : 'column'} ${u.index + 1}`;
-}
-
-function unitsName(type: UnitType, indices: number[]): string {
-  if (indices.length === 1) return unitName({ type, index: indices[0] });
-  if (type === 'region') return `the ${joinList(indices.map((i) => REGION_NAMES[i] ?? `#${i + 1}`))} regions`;
-  return `${type === 'row' ? 'rows' : 'columns'} ${joinList(indices.map((i) => String(i + 1)))}`;
 }
 
 export class Solver {
@@ -226,7 +210,7 @@ export class Solver {
           targets: cs,
           focus: u.cells,
           technique: 'single',
-          message: `Only one cell is left for a queen in ${unitName(u)}.`,
+          msg: { key: 'single', unit: u.type, index: u.index },
         };
       }
     }
@@ -295,23 +279,9 @@ export class Solver {
     const focusSet = new Set<number>();
     for (const i of aIdx) for (const c of this.byType[ta][i].cells) focusSet.add(c);
     for (const i of bIdx) for (const c of this.byType[tb][i].cells) focusSet.add(c);
-    const A = unitsName(ta, aIdx);
-    const B = unitsName(tb, bIdx);
-    let message: string;
-    if (ta === 'region') {
-      message =
-        k === 1
-          ? `${cap(A)} only has open cells in ${B}, so its queen must be there. No other region can use ${B}.`
-          : `${cap(A)} only have open cells in ${B}, so their queens fill those lines. No other region can use them.`;
-    } else if (tb === 'region') {
-      message =
-        k === 1
-          ? `Every open cell in ${A} belongs to ${B}, so that region's queen must be in ${A}. Cross out the rest of ${B}.`
-          : `${cap(A)} only have open cells in ${B}, so those regions' queens must sit in these lines. Cross out the rest of those regions.`;
-    } else {
-      message = `${cap(A)} only have open cells in ${B}, so their queens use up those ${tb === 'col' ? 'columns' : 'rows'}. No other ${ta === 'row' ? 'row' : 'column'} can use them.`;
-    }
-    return { kind: 'eliminate', targets: elim, focus: [...focusSet], technique: k === 1 ? 'confine' : 'group', message };
+    const key = ta === 'region' ? 'regionToLines' : tb === 'region' ? 'linesToRegions' : 'linesToLines';
+    const msg: StepMsg = { key, a: ta, aIdx, b: tb, bIdx };
+    return { kind: 'eliminate', targets: elim, focus: [...focusSet], technique: k === 1 ? 'confine' : 'group', msg };
   }
 
   /** Cells whose queen would wipe out every open cell of another unit. */
@@ -340,16 +310,12 @@ export class Solver {
         if (all) blockers.push(c);
       }
       if (blockers.length === 0) continue;
-      const name = unitName(u);
       return {
         kind: 'eliminate',
         targets: blockers,
         focus: u.cells,
         technique: 'block',
-        message:
-          blockers.length === 1
-            ? `Placing a queen on the highlighted cell would leave no room for ${name}, so it gets an ✕.`
-            : `A queen on any of the highlighted cells would leave no room for ${name}, so they all get an ✕.`,
+        msg: { key: 'block', unit: u.type, index: u.index, count: blockers.length },
       };
     }
     return null;
@@ -389,16 +355,12 @@ export class Solver {
     }
     if (!best) return null;
     const focus = new Set<number>([...best.dead.cells, ...best.forced]);
-    const name = unitName(best.dead);
     return {
       kind: 'eliminate',
       targets: [best.cell],
       focus: [...focus],
       technique: 'chain',
-      message:
-        best.forced.length === 0
-          ? `Placing a queen on the highlighted cell would leave no room for ${name}, so it gets an ✕.`
-          : `If a queen went on the highlighted cell, it would force ${best.forced.length === 1 ? 'another queen' : 'other queens'} and then ${name} would have no room left. So it gets an ✕.`,
+      msg: { key: 'chain', unit: best.dead.type, index: best.dead.index, forced: best.forced.length },
     };
   }
 

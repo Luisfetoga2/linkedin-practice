@@ -17,7 +17,7 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'sudoku',
   name: 'Mini Sudoku',
-  tagline: 'The classic game, made mini',
+  tagline: { en: 'The classic game, made mini', es: 'El clásico, en versión mini' },
   color: '#1f7a4f',
   colorEnd: '#2d9a66',
   tint: '#d6faee',
@@ -26,27 +26,55 @@ export const meta: GameMeta = {
   options: [
     {
       id: 'difficulty',
-      label: 'Difficulty',
+      label: { en: 'Difficulty', es: 'Dificultad' },
       default: 'medium',
       choices: [
-        { value: 'easy', label: 'Easy' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'hard', label: 'Hard' },
+        { value: 'easy', label: { en: 'Easy', es: 'Fácil' } },
+        { value: 'medium', label: { en: 'Medium', es: 'Media' } },
+        { value: 'hard', label: { en: 'Hard', es: 'Difícil' } },
       ],
     },
   ],
   settings: [
-    { key: 'showErrors', label: 'Show conflicts', description: 'Highlight numbers that repeat in a row, column, or box.', default: true },
-    { key: 'autoNotes', label: 'Auto-clear notes', description: 'Remove a note automatically when that number is placed nearby.', default: true },
+    {
+      key: 'showErrors',
+      label: { en: 'Show conflicts', es: 'Mostrar conflictos' },
+      description: {
+        en: 'Highlight numbers that repeat in a row, column, or box.',
+        es: 'Resalta los números que se repiten en una fila, columna o recuadro.',
+      },
+      default: true,
+    },
+    {
+      key: 'autoNotes',
+      label: { en: 'Auto-clear notes', es: 'Borrar notas automáticamente' },
+      description: {
+        en: 'Remove a note automatically when that number is placed nearby.',
+        es: 'Quita una nota automáticamente cuando ese número se coloca en su fila, columna o recuadro.',
+      },
+      default: true,
+    },
   ],
-  howToPlay: (
-    <>
-      <p>Fill the 6×6 grid so that every row, column, and 2×3 box contains the numbers 1 through 6.</p>
-      <ul>
-        <li>Select a cell, then tap a number (or type 1–6).</li>
-        <li>Switch on Notes (or press N) to pencil in candidates. Arrow keys move, Backspace erases.</li>
-        <li>Every puzzle has exactly one solution.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Fill the 6×6 grid so that every row, column, and 2×3 box contains the numbers 1 through 6.</p>
+        <ul>
+          <li>Select a cell, then tap a number (or type 1–6).</li>
+          <li>Switch on Notes (or press N) to pencil in candidates. Arrow keys move, Backspace erases.</li>
+          <li>Every puzzle has exactly one solution.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Llena la cuadrícula de 6×6 para que cada fila, columna y recuadro de 2×3 tenga los números del 1 al 6.</p>
+        <ul>
+          <li>Elige una casilla y luego toca un número (o escribe del 1 al 6).</li>
+          <li>Activa Notas (o presiona N) para anotar posibles números. Las flechas te mueven y la tecla de retroceso borra.</li>
+          <li>Cada tablero tiene una sola solución.</li>
+        </ul>
+      </>
+    ),
+  },
 };

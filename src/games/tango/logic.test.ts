@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STR } from './i18n';
 import {
   CELLS,
   LINES,
@@ -71,7 +72,7 @@ describe('tango deductions', () => {
         const d = findDeduction(board, ctx, 3);
         if (!d) break;
         expect(d.value).toBe(p.solution[d.cell]);
-        expect(d.message.length).toBeGreaterThan(10);
+        expect(STR.en.deduction(d.msg).length).toBeGreaterThan(10);
         board[d.cell] = d.value;
       }
       expect(board).toEqual(p.solution);

@@ -18,7 +18,7 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'queens',
   name: 'Queens',
-  tagline: 'Crown each region',
+  tagline: { en: 'Crown each region', es: 'Corona cada región' },
   color: '#704b95',
   colorEnd: '#5a3a7c',
   tint: '#f5ebff',
@@ -27,23 +27,48 @@ export const meta: GameMeta = {
   options: [
     {
       id: 'size',
-      label: 'Size',
+      label: { en: 'Size', es: 'Tamaño' },
       default: '8',
       choices: ['6', '7', '8', '9', '10'].map((v) => ({ value: v, label: `${v}×${v}` })),
     },
   ],
   settings: [
-    { key: 'autoX', label: 'Auto-place ✕', description: 'Mark cells that can no longer hold a queen when you place one.', default: false },
-    { key: 'showClashes', label: 'Show clashes', description: 'Highlight queens that break a rule.', default: true },
+    {
+      key: 'autoX',
+      label: { en: 'Auto-place ✕', es: 'Poner ✕ automáticamente' },
+      description: {
+        en: 'Mark cells that can no longer hold a queen when you place one.',
+        es: 'Al poner una reina, marca las casillas donde ya no puede ir otra.',
+      },
+      default: false,
+    },
+    {
+      key: 'showClashes',
+      label: { en: 'Show clashes', es: 'Mostrar conflictos' },
+      description: { en: 'Highlight queens that break a rule.', es: 'Resalta las reinas que rompen una regla.' },
+      default: true,
+    },
   ],
-  howToPlay: (
-    <>
-      <p>Your goal is to have exactly one 👑 in each row, column, and color region.</p>
-      <ul>
-        <li>Tap once to place ✕ and tap twice for 👑. Use ✕ to mark where 👑 cannot be placed. Right-click places a 👑 directly.</li>
-        <li>Two 👑 cannot touch each other, not even diagonally.</li>
-        <li>Drag across cells to place several ✕ at once.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Your goal is to have exactly one 👑 in each row, column, and color region.</p>
+        <ul>
+          <li>Tap once to place ✕ and tap twice for 👑. Use ✕ to mark where 👑 cannot be placed. Right-click places a 👑 directly.</li>
+          <li>Two 👑 cannot touch each other, not even diagonally.</li>
+          <li>Drag across cells to place several ✕ at once.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Tu objetivo es tener exactamente una 👑 en cada fila, columna y región de color.</p>
+        <ul>
+          <li>Toca una vez para poner ✕ y dos veces para poner 👑. Usa ✕ para marcar dónde no puede ir una 👑. Con clic derecho pones una 👑 directamente.</li>
+          <li>Dos 👑 no pueden tocarse, ni siquiera en diagonal.</li>
+          <li>Arrastra sobre las casillas para poner varias ✕ a la vez.</li>
+        </ul>
+      </>
+    ),
+  },
 };

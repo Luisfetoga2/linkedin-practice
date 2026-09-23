@@ -8,7 +8,8 @@ import styles from './Game.module.css';
 import { generate } from './generator';
 import { CROSS, EMPTY, QUEEN, getHint, type Hint } from './hints';
 import { Crown, Cross } from './icons';
-import { REGION_NAMES, findClashes } from './puzzle';
+import { STR } from './i18n';
+import { findClashes } from './puzzle';
 import { Solver } from './solver';
 
 interface Drag {
@@ -27,7 +28,8 @@ const WAVE_STEP_MS = 45;
 /** Must match `.frame` border width in Game.module.css. */
 const FRAME_BORDER_PX = 3;
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const size = Math.min(10, Math.max(6, Number(options.size) || 8));
   const puzzle = useMemo(() => generate(seed, size), [seed, size]);
   const n = puzzle.size;
@@ -205,7 +207,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
 
   const showHint = () => {
     if (locked) return;
-    const h = getHint(puzzle, solver, boardRef.current.cells);
+    const h = getHint(puzzle, solver, boardRef.current.cells, t);
     if (!h) return;
     setHint(h);
     onHint();
@@ -293,10 +295,10 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   const hintTargets = useMemo(() => new Set(hint?.targets ?? []), [hint]);
   const hintFocus = useMemo(() => new Set([...(hint?.focus ?? []), ...(hint?.targets ?? [])]), [hint]);
   const mistake = hint?.kind === 'wrong-queen' || hint?.kind === 'wrong-cross';
-  const applyLabel = !hint ? '' : hint.action === 'cross' ? 'Place ✕' : hint.action === 'queen' ? 'Place queen' : 'Remove it';
+  const applyLabel = !hint ? '' : hint.action === 'cross' ? t.applyCross : hint.action === 'queen' ? t.applyQueen : t.applyClear;
 
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    <div className={`${styles.wrap}${lang === 'es' ? ` ${styles.longLabels}` : ''}`} ref={wrapRef}>
       <div
         className={`${styles.frame}${won ? ` ${styles.won}` : ''}`}
         style={nudge[0] || nudge[1] ? { position: 'relative', left: nudge[0], top: nudge[1] } : undefined}
@@ -310,7 +312,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             ...(boardPx ? { width: boardPx, height: boardPx } : null),
           }}
           role="grid"
-          aria-label={`Queens ${n} by ${n} board`}
+          aria-label={t.boardLabel(n)}
           tabIndex={0}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -334,7 +336,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
               <div
                 key={i}
                 role="gridcell"
-                aria-label={`Row ${r + 1}, column ${c + 1}, ${REGION_NAMES[g]}${v === QUEEN ? ', queen' : v === CROSS ? ', crossed out' : ''}`}
+                aria-label={t.cellLabel(r + 1, c + 1, g, v === QUEEN ? 'queen' : v === CROSS ? 'cross' : 'empty')}
                 className={`${styles.cell} ${styles[`r${g}`]}`}
                 style={{ '--d': `${(r + c) * WAVE_STEP_MS}ms` } as CSSProperties}
               >
@@ -357,9 +359,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       </div>
 
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={locked || history.length === 0} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={showHint} disabled={locked} />
-        <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={locked || isEmptyBoard(board)} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || history.length === 0} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={showHint} disabled={locked} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || isEmptyBoard(board)} />
       </ControlBar>
 
       {hint && !won && (

@@ -5,6 +5,7 @@ import { Bulb, Eraser, Pencil, Undo } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import { CELLS, HOUSES, N, PEERS, cellHouses, colOf, findConflicts, generateSudoku, nextPlacement, rowOf, type Difficulty } from './logic';
 import styles from './Game.module.css';
+import { STR } from './i18n';
 
 interface Snapshot {
   values: number[];
@@ -24,7 +25,8 @@ interface HintState {
 const bit = (d: number) => 1 << (d - 1);
 const DIGITS = [1, 2, 3, 4, 5, 6];
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const difficulty = (options.difficulty ?? 'medium') as Difficulty;
   const puzzle = useMemo(() => generateSudoku(seed, difficulty), [seed, difficulty]);
   const locked = useMemo(() => puzzle.givens.map((v) => v !== 0), [puzzle]);
@@ -140,7 +142,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const wrong = selected !== null && isWrong(selected) ? selected : values.findIndex((_, i) => isWrong(i));
     if (wrong >= 0) {
       setSelected(wrong);
-      setHint({ cell: wrong, area: [], pattern: [], message: "This number isn't right.", mistake: true });
+      setHint({ cell: wrong, area: [], pattern: [], message: t.wrongNumber, mistake: true });
       return;
     }
     const next = nextPlacement(values);
@@ -155,7 +157,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         cell: placement.cell,
         area: [...area],
         pattern: via?.pattern ?? [],
-        message: via ? `${via.message} Then: ${placement.message}` : placement.message,
+        message: via ? t.thenStep(t.step(via.msg), t.step(placement.msg)) : t.step(placement.msg),
       });
       place(placement.cell, placement.digit, true);
       return;
@@ -164,7 +166,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     const target = selected !== null && !values[selected] ? selected : values.findIndex((v) => !v);
     if (target < 0) return;
     setSelected(target);
-    setHint({ cell: target, area: [], pattern: [], message: `This cell is ${puzzle.solution[target]}.` });
+    setHint({ cell: target, area: [], pattern: [], message: t.reveal(puzzle.solution[target]) });
     place(target, puzzle.solution[target], true);
   };
 
@@ -245,8 +247,8 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
   };
 
   return (
-    <div className={styles.wrap}>
-      <div className={`${styles.board}${won ? ` ${styles.won}` : ''}`} role="grid" aria-label="Mini Sudoku board">
+    <div className={`${styles.wrap}${lang === 'es' ? ` ${styles.longLabels}` : ''}`}>
+      <div className={`${styles.board}${won ? ` ${styles.won}` : ''}`} role="grid" aria-label={t.boardLabel}>
         {values.map((v, i) => {
           const r = rowOf(i);
           const c = colOf(i);
@@ -263,7 +265,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           else if (hintArea.has(i)) cls.push(styles.hintArea);
           if (conflicts.has(i)) cls.push(styles.conflictText);
           if (hint?.mistake && hint.cell === i) cls.push(styles.mistake);
-          const label = `Row ${r + 1}, column ${c + 1}: ${v || 'empty'}${locked[i] ? ', given' : ''}`;
+          const label = t.cellLabel(r + 1, c + 1, v, locked[i]);
           return (
             <button
               key={i}
@@ -295,7 +297,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         })}
       </div>
 
-      <div className={styles.pad} role="group" aria-label="Number pad">
+      <div className={styles.pad} role="group" aria-label={t.numberPad}>
         {DIGITS.map((d) => (
           <button
             key={d}
@@ -303,7 +305,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             className={`${styles.key}${digitCounts[d] >= N ? ` ${styles.keyDone}` : ''}${notesMode ? ` ${styles.keyNotes}` : ''}`}
             onClick={() => input(d)}
             disabled={inputBlocked}
-            aria-label={notesMode ? `Note ${d}` : `${d}`}
+            aria-label={notesMode ? t.noteKey(d) : `${d}`}
           >
             {d}
           </button>
@@ -311,16 +313,16 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       </div>
 
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={inputBlocked || !history.length} />
-        <ControlButton icon={<Eraser size={18} />} label="Erase" onClick={erase} disabled={inputBlocked} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={inputBlocked || !history.length} />
+        <ControlButton icon={<Eraser size={18} />} label={t.erase} onClick={erase} disabled={inputBlocked} />
         <ControlButton
           icon={<Pencil size={18} />}
-          label="Notes"
+          label={t.notes}
           onClick={toggleNotes}
           disabled={inputBlocked}
           active={notesMode}
         />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={inputBlocked} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={inputBlocked} />
       </ControlBar>
 
       {hint && <HintBubble onDismiss={() => setHint(null)}>{hint.message}</HintBubble>}

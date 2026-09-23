@@ -16,6 +16,7 @@ import {
   type Val,
 } from './logic';
 import styles from './Game.module.css';
+import { STR } from './i18n';
 
 interface HintState {
   cell: number;
@@ -52,7 +53,8 @@ function SignGlyph({ eq }: { eq: boolean }) {
   );
 }
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const difficulty = (options.difficulty ?? 'medium') as Difficulty;
   const puzzle = useMemo(() => generateTango(seed, difficulty), [seed, difficulty]);
   const ctx = useMemo(() => makeCtx(puzzle.signs), [puzzle]);
@@ -152,13 +154,13 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         cell: wrong,
         related: [],
         mistake: true,
-        message: `This ${board[wrong] === SUN ? 'sun' : 'moon'} isn't right. Tap it to change it.`,
+        message: t.wrongSymbol(board[wrong]),
       });
       return;
     }
     const d = findDeduction(board, ctx, 3);
     if (d) {
-      setHint({ cell: d.cell, related: d.related, message: d.message, ghost: d.value });
+      setHint({ cell: d.cell, related: d.related, message: t.deduction(d.msg), ghost: d.value });
       return;
     }
     // Fallback: reveal one correct cell.
@@ -168,7 +170,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     next[empty] = puzzle.solution[empty];
     setHistory([...live.current.history, board]);
     setBoard(next);
-    setHint({ cell: empty, related: [], message: "Here's one to get you going." });
+    setHint({ cell: empty, related: [], message: t.reveal });
   };
 
   // Win detection.
@@ -245,17 +247,17 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     return findViolations(settled, puzzle.signs).filter((v) => v.cells.every((c) => board[c] === settled[c]));
   }, [board, settled, puzzle.signs, showErrors]);
   const errorCells = useMemo(() => new Set(violations.flatMap((v) => v.cells)), [violations]);
-  const errorText = violations.length ? violationMessage(violations[0]) : null;
+  const errorText = violations.length ? violationMessage(violations[0], t) : null;
 
   const hintCells = useMemo(() => (hint ? new Set([hint.cell, ...hint.related]) : null), [hint]);
   const canClear = board.some((v, i) => v !== puzzle.givens[i]);
 
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap}${lang === 'es' ? ` ${styles.longLabels}` : ''}`}>
       <div
         className={`${styles.board}${hint ? ` ${styles.hinting}` : ''}${won ? ` ${styles.won}` : ''}`}
         role="grid"
-        aria-label="Tango board"
+        aria-label={t.boardLabel}
         onPointerDown={() => setKeyboardMode(false)}
       >
         <div className={styles.grid}>
@@ -271,7 +273,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
               else cls.push(styles.dim);
             }
             if (keyboardMode && cursor === i && !won) cls.push(styles.cursor);
-            const label = `Row ${r + 1}, column ${c + 1}: ${v === SUN ? 'sun' : v === MOON ? 'moon' : 'empty'}${locked[i] ? ', locked' : ''}`;
+            const label = t.cellLabel(r + 1, c + 1, v, locked[i]);
             return (
               <button
                 key={i}
@@ -310,7 +312,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
               key={`${s.a}-${s.b}`}
               className={styles.sign}
               style={{ left: `${left}%`, top: `${top}%` }}
-              aria-label={s.eq ? 'equal' : 'opposite'}
+              aria-label={s.eq ? t.signEqual : t.signOpposite}
             >
               <SignGlyph eq={s.eq} />
             </span>
@@ -331,9 +333,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       </div>
 
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={inputBlocked || !history.length} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={inputBlocked} />
-        <ControlButton icon={<Reset size={18} />} label="Clear" onClick={clear} disabled={inputBlocked || !canClear} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={inputBlocked || !history.length} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={inputBlocked} />
+        <ControlButton icon={<Reset size={18} />} label={t.clear} onClick={clear} disabled={inputBlocked || !canClear} />
       </ControlBar>
 
       {hint && <HintBubble onDismiss={() => setHint(null)}>{hint.message}</HintBubble>}

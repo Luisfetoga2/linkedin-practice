@@ -1,4 +1,5 @@
 import { createRng, type Rng } from '../../lib/rng';
+import { STR, type DeductionMsg, type TangoStrings } from './i18n';
 
 /** 0 = empty, 1 = sun, 2 = moon. */
 export type Val = 0 | 1 | 2;
@@ -25,8 +26,6 @@ export interface TangoPuzzle {
 }
 
 export const opp = (v: Val): Val => (v === SUN ? MOON : v === MOON ? SUN : 0);
-const name = (v: Val) => (v === SUN ? 'sun' : 'moon');
-const names = (v: Val) => (v === SUN ? 'suns' : 'moons');
 
 // ---------------------------------------------------------------------------
 // Lines & valid line patterns
@@ -36,8 +35,6 @@ const names = (v: Val) => (v === SUN ? 'suns' : 'moons');
 export const LINES: number[][] = [];
 for (let r = 0; r < N; r++) LINES.push(Array.from({ length: N }, (_, c) => r * N + c));
 for (let c = 0; c < N; c++) LINES.push(Array.from({ length: N }, (_, r) => r * N + c));
-
-export const lineLabel = (li: number) => (li < N ? 'row' : 'column');
 
 const popcount = (x: number) => {
   let n = 0;
@@ -139,17 +136,9 @@ export function findViolations(board: ArrayLike<number>, signs: Sign[]): Violati
   return out;
 }
 
-export function violationMessage(v: Violation): string {
-  switch (v.kind) {
-    case 'triple':
-      return "3 suns or moons can't be next to each other";
-    case 'count':
-      return `Each ${lineLabel(v.line ?? 0)} must have 3 suns and 3 moons`;
-    case 'eq':
-      return 'Cells joined by = must match';
-    case 'neq':
-      return 'Cells joined by × must be opposite';
-  }
+/** Short rule-break message shown under the board, in the language of `t`. */
+export function violationMessage(v: Violation, t: TangoStrings = STR.en): string {
+  return t.violation(v.kind === 'count' ? { kind: 'count', line: v.line ?? 0 } : { kind: v.kind });
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +153,8 @@ export interface Deduction {
   technique: 'sign' | 'pair' | 'sandwich' | 'count' | 'line' | 'trial';
   /** Cells that justify the deduction (highlighted by the hint). */
   related: number[];
-  message: string;
+  /** Structured explanation; format it with STR[lang].deduction(). */
+  msg: DeductionMsg;
 }
 
 function basicDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
@@ -182,9 +172,7 @@ function basicDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
       level: 1,
       technique: 'sign',
       related: [x ? s.a : s.b],
-      message: s.eq
-        ? `Cells joined by = must match, so this cell must be a ${name(value)}.`
-        : `Cells joined by × must be opposite, so this cell must be a ${name(value)}.`,
+      msg: { key: 'sign', eq: s.eq, value },
     };
   }
   for (let li = 0; li < LINES.length; li++) {
@@ -201,7 +189,7 @@ function basicDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
           level: 1,
           technique: 'pair',
           related: [cells[i], cells[i + 1]],
-          message: `These two ${names(v)} are next to each other, so the next cell must be a ${name(opp(v))}.`,
+          msg: { key: 'pair', v },
         };
       }
     }
@@ -215,7 +203,7 @@ function basicDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
         level: 1,
         technique: 'sandwich',
         related: [cells[i], cells[i + 2]],
-        message: `A ${name(v)} here would make 3 ${names(v)} in a row, so this cell must be a ${name(opp(v))}.`,
+        msg: { key: 'sandwich', v },
       };
     }
     // Count completion.
@@ -230,7 +218,7 @@ function basicDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
         level: 1,
         technique: 'count',
         related: hits,
-        message: `This ${lineLabel(li)} already has 3 ${names(v)}, so the rest must be ${names(opp(v))}.`,
+        msg: { key: 'count', v, line: li },
       };
     }
   }
@@ -260,17 +248,13 @@ function lineDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
       const trial = Array.from(board);
       trial[c] = opp(value);
       const withoutSigns = consistent(trial, li, BALANCED_PATTERNS).length > 0;
-      const label = lineLabel(li);
-      const message = withoutSigns
-        ? `Look at this ${label} and its signs: a ${name(opp(value))} here would leave no way to fill it by the rules. So this cell must be a ${name(value)}.`
-        : `Look at this ${label}: a ${name(opp(value))} here would leave no way to fit 3 suns and 3 moons without 3 in a row. So this cell must be a ${name(value)}.`;
       return {
         cell: c,
         value,
         level: 2,
         technique: 'line',
         related: cells.filter((x) => x !== c),
-        message,
+        msg: { key: 'line', value, line: li, withoutSigns },
       };
     }
   }
@@ -320,7 +304,6 @@ function trialDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
       const bad = propagate(temp, ctx);
       if (bad < 0) continue;
       const value = opp(v);
-      const label = lineLabel(bad);
       const inLine = LINES[bad].includes(c);
       return {
         cell: c,
@@ -328,9 +311,7 @@ function trialDeduction(board: ArrayLike<number>, ctx: Ctx): Deduction | null {
         level: 3,
         technique: 'trial',
         related: LINES[bad].filter((x) => x !== c),
-        message: inLine
-          ? `If this cell were a ${name(v)}, the forced moves would leave this ${label} impossible to complete. So it must be a ${name(value)}.`
-          : `If this cell were a ${name(v)}, the forced moves would leave the highlighted ${label} impossible to complete. So it must be a ${name(value)}.`,
+        msg: { key: 'trial', tried: v, value, line: bad, inLine },
       };
     }
   }
