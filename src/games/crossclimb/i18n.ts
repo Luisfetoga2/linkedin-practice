@@ -26,6 +26,9 @@ export const STR = defineStrings(
     enterKey: 'Enter',
     enterAria: 'Enter',
     backspace: 'Backspace',
+    loadingWords: 'Loading words…',
+    loadFailed: 'Couldn’t load the word list.',
+    retry: 'Try again',
   },
   {
     wrongWord: 'Esta palabra no es correcta.',
@@ -52,5 +55,8 @@ export const STR = defineStrings(
     enterKey: 'Sig.',
     enterAria: 'Siguiente fila',
     backspace: 'Borrar',
+    loadingWords: 'Cargando palabras…',
+    loadFailed: 'No se pudo cargar la lista de palabras.',
+    retry: 'Reintentar',
   },
 );

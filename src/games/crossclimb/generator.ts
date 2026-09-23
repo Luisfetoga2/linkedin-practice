@@ -1,5 +1,5 @@
 import { createRng, type Rng } from '../../lib/rng';
-import { getClueBank, getPairs, type EndPair, type WordLength } from './data';
+import { getClueBank, getPairs, type EndPair, type WordLang, type WordLength } from './data';
 
 export const RUNGS = 7;
 export const MIDDLE = RUNGS - 2;
@@ -70,12 +70,14 @@ interface Graph {
   starts: number[];
 }
 
-const graphs = new Map<WordLength, Graph>();
+const graphs = new Map<string, Graph>();
 
-export function getGraph(length: WordLength): Graph {
-  let g = graphs.get(length);
+/** One-letter-change graph over the clued vocabulary of a word length and word language. */
+export function getGraph(length: WordLength, lang: WordLang = 'en'): Graph {
+  const key = `${lang}${length}`;
+  let g = graphs.get(key);
   if (g) return g;
-  const bank = getClueBank(length);
+  const bank = getClueBank(length, lang);
   const words = [...bank.keys()];
   const index = new Map(words.map((w, i) => [w, i]));
   const adj: number[][] = words.map(() => []);
@@ -92,7 +94,7 @@ export function getGraph(length: WordLength): Graph {
   const adjSet = adj.map((a) => new Set(a));
   const starts = words.map((_, i) => i).filter((i) => adj[i].length >= 2);
   g = { words, index, adj, adjSet, starts };
-  graphs.set(length, g);
+  graphs.set(key, g);
   return g;
 }
 
@@ -171,11 +173,12 @@ export function findPairLadder(g: Graph, top: number, bottom: number, rng: Rng |
   return rec() ? path : null;
 }
 
-export function generateLadder(seed: number, length: WordLength): Ladder {
+/** Deterministic ladder for a seed. Spanish (`lang` 'es') needs its data loaded first (see loadWords). */
+export function generateLadder(seed: number, length: WordLength, lang: WordLang = 'en'): Ladder {
   const rng = createRng(seed);
-  const g = getGraph(length);
-  const bank = getClueBank(length);
-  const pairs = getPairs(length);
+  const g = getGraph(length, lang);
+  const bank = getClueBank(length, lang);
+  const pairs = getPairs(length, lang);
   let path: number[] | null = null;
   let pair: EndPair | null = null;
   // Pairs are tried in a seed-determined order; every committed pair is known to be feasible, so the

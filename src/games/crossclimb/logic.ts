@@ -72,3 +72,19 @@ export function orderHint(order: readonly number[], words: readonly string[]): n
   if (!misplaced.length) return null;
   return lonely.find((v) => misplaced.includes(v)) ?? lonely[0] ?? misplaced[0];
 }
+
+const BASE: Record<string, string> = { Á: 'A', À: 'A', Â: 'A', Ä: 'A', É: 'E', È: 'E', Ê: 'E', Ë: 'E', Í: 'I', Ì: 'I', Î: 'I', Ï: 'I', Ó: 'O', Ò: 'O', Ô: 'O', Ö: 'O', Ú: 'U', Ù: 'U', Û: 'U', Ü: 'U' };
+
+/**
+ * Letter a physical key types, or null. Accented vowels map to their base letter (á → A); Ñ is its
+ * own letter and only exists in the Spanish word list.
+ */
+export function keyToLetter(key: string, lang: 'en' | 'es'): string | null {
+  const ch = key.normalize('NFC');
+  if (ch.length !== 1) return null;
+  const up = ch.toUpperCase();
+  const base = BASE[up] ?? up;
+  if (/^[A-Z]$/.test(base)) return base;
+  if (base === 'Ñ' && lang === 'es') return base;
+  return null;
+}

@@ -3,9 +3,9 @@ import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton } from '../../core/components/Controls';
 import { Bulb } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
-import type { WordLength } from './data';
+import { loadWords, wordsLoaded, type WordLang, type WordLength } from './data';
 import { generateLadder, MIDDLE, oneApart, RUNGS } from './generator';
-import { computePhase, forwardOrder, hintRow, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
+import { computePhase, forwardOrder, hintRow, keyToLetter, letterHint, MIDS, nextRowWithEmpty, orderHint, type Phase } from './logic';
 import { Keyboard } from './Keyboard';
 import { STR } from './i18n';
 import styles from './Game.module.css';
@@ -38,11 +38,57 @@ function dragTarget(d: DragState): number {
   return Math.max(0, Math.min(MIDDLE - 1, Math.round(d.from + d.dy / d.pitch)));
 }
 
-export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+/** Loads the word list picked by the `words` option (not the UI language), then shows the ladder. */
+export default function Game(props: GameProps) {
+  const wordLang: WordLang = props.options.words === 'es' ? 'es' : 'en';
+  const t = STR[props.lang];
+  const [ready, setReady] = useState(() => wordsLoaded(wordLang));
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (ready) return;
+    let alive = true;
+    loadWords(wordLang).then(
+      () => alive && setReady(true),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [wordLang, ready, attempt]);
+
+  if (!ready) {
+    return (
+      <div className="lp-loading" role="status">
+        {failed ? (
+          <p>
+            {t.loadFailed}{' '}
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setFailed(false);
+                setAttempt((a) => a + 1);
+              }}
+            >
+              {t.retry}
+            </button>
+          </p>
+        ) : (
+          t.loadingWords
+        )}
+      </div>
+    );
+  }
+  return <Board {...props} wordLang={wordLang} />;
+}
+
+function Board({ seed, lang, options, paused, onReady, onHint, onComplete, wordLang }: GameProps & { wordLang: WordLang }) {
   const t = STR[lang];
   const length: WordLength = options.length === '5' ? 5 : 4;
   const N = length;
-  const ladder = useMemo(() => generateLadder(seed, length), [seed, length]);
+  const ladder = useMemo(() => generateLadder(seed, length, wordLang), [seed, length, wordLang]);
   const { words, clues, endClue } = ladder;
   const [showLinks] = useGameSetting<boolean>('crossclimb', 'links', false);
 
@@ -233,7 +279,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   // ---- keyboard ---------------------------------------------------------------
   const onKey = (key: string, shift = false) => {
     if (paused || phase === 'done') return;
-    if (/^[A-Z]$/.test(key)) typeLetter(key);
+    if (/^[A-ZÑ]$/.test(key)) typeLetter(key);
     else if (key === 'Backspace') backspace();
     else if (key === 'Enter') enter();
     else if (key === 'ArrowLeft') setSel({ w: sel.w, c: Math.max(0, sel.c - 1) });
@@ -254,8 +300,9 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
       const t = e.target as HTMLElement | null;
       if (t?.closest?.('input, textarea, select, .lp-modal')) return;
       if ((e.key === 'Enter' || e.key === ' ') && t?.closest?.('button, a')) return;
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      if (/^[A-Z]$/.test(key) || ['Backspace', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) {
+      // Accented letters type their base letter; Ñ only exists in the Spanish word list.
+      const key = keyToLetter(e.key, wordLang) ?? e.key;
+      if (/^[A-ZÑ]$/.test(key) || ['Backspace', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) {
         e.preventDefault();
         keyHandler.current(key, e.shiftKey);
       }
@@ -550,7 +597,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
         <ControlButton label={t.hint} icon={<Bulb size={18} />} onClick={hint} disabled={paused || phase === 'done'} />
       </ControlBar>
 
-      <Keyboard labels={t} disabled={paused || !(phase === 'clues' || phase === 'final')} onKey={(k) => onKey(k)} />
+      <Keyboard labels={t} layout={wordLang} disabled={paused || !(phase === 'clues' || phase === 'final')} onKey={(k) => onKey(k)} />
     </div>
   );
 }

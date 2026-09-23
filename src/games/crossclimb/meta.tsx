@@ -19,9 +19,18 @@ export const meta: GameMeta = {
   colorEnd: '#07778b',
   tint: '#def9fc',
   scoring: 'time',
-  contentLanguages: ['en'],
   Icon,
   options: [
+    {
+      id: 'words',
+      label: { en: 'Words', es: 'Palabras' },
+      default: 'en',
+      followsLanguage: true,
+      choices: [
+        { value: 'en', label: { en: 'English', es: 'Inglés' } },
+        { value: 'es', label: { en: 'Spanish', es: 'Español' } },
+      ],
+    },
     {
       id: 'length',
       label: { en: 'Word length', es: 'Longitud de palabra' },
@@ -59,13 +68,13 @@ export const meta: GameMeta = {
     es: (
       <>
         <p>Adivina palabras a partir de las pistas y luego ordénalas para formar una escalera de palabras.</p>
-        <p>Por ahora, las pistas y las palabras están en inglés.</p>
         <ul>
           <li>Responde las cinco pistas del medio en el orden que quieras. Toca una fila (o usa las flechas de la tarjeta de la pista) para ver su pista.</li>
           <li>No sabrás si una respuesta individual es correcta. Cuando las cinco estén bien, tendrás que ordenarlas.</li>
           <li>Arrastra las filas con el ícono ≡ para que cada palabra difiera de sus vecinas en exactamente una letra.</li>
           <li>Con la escalera en orden, se desbloquean la fila de arriba y la de abajo. Comparten una sola pista: dos palabras relacionadas o una palabra compuesta que se lee de arriba hacia abajo. Resuelve ambas para terminar.</li>
           <li>¿No sabes cómo seguir? Una pista revela la siguiente letra, te avisa cuando una palabra completa no es correcta o señala una fila fuera de lugar.</li>
+          <li>Con las palabras en español, los acentos no cuentan (Á es A) y la Ñ es una letra aparte. En el inicio puedes elegir palabras en inglés o en español.</li>
         </ul>
       </>
     ),
