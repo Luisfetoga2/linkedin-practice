@@ -33,8 +33,9 @@ describe('mini sudoku generator', () => {
         expect(rep.values).toEqual(p.solution);
       }
       times.sort((a, b) => a - b);
-      expect(times[Math.floor(times.length / 2)]).toBeLessThan(100);
-      expect(times[times.length - 1]).toBeLessThan(300);
+      // Generous bounds: shared CI runners are ~2× slower than a laptop; this only guards against pathological slowdowns.
+      expect(times[Math.floor(times.length / 2)]).toBeLessThan(250);
+      expect(times[times.length - 1]).toBeLessThan(800);
     });
   }
 
