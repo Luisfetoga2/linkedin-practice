@@ -1,0 +1,235 @@
+.wrap {
+  --ink: #1f1f1f;
+  --x-ink: rgba(0, 0, 0, 0.45);
+  --clue-ink: rgba(0, 0, 0, 0.88);
+  --clue-done: rgba(0, 0, 0, 0.28);
+  --clue-bg: var(--cell-bg-alt);
+  --clue-active: color-mix(in srgb, var(--game-color) 14%, var(--cell-bg));
+  --focus-line: color-mix(in srgb, var(--game-color) 7%, transparent);
+  --line-thin: rgba(0, 0, 0, 0.16);
+  --line-thick: rgba(0, 0, 0, 0.55);
+  width: 100%;
+  max-width: 560px;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+:global(:root[data-theme='dark']) .wrap {
+  --ink: #ececec;
+  --x-ink: rgba(255, 255, 255, 0.5);
+  --clue-ink: rgba(255, 255, 255, 0.9);
+  --clue-done: rgba(255, 255, 255, 0.3);
+  --line-thin: rgba(255, 255, 255, 0.12);
+  --line-thick: rgba(255, 255, 255, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .wrap {
+    --ink: #ececec;
+    --x-ink: rgba(255, 255, 255, 0.5);
+    --clue-ink: rgba(255, 255, 255, 0.9);
+    --clue-done: rgba(255, 255, 255, 0.3);
+    --line-thin: rgba(255, 255, 255, 0.12);
+    --line-thick: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.board {
+  display: grid;
+  justify-content: center;
+  align-self: center;
+}
+
+.corner {
+  grid-area: 1 / 1;
+}
+
+/* ---------- Clues ---------- */
+.colClues {
+  grid-area: 1 / 2;
+  display: grid;
+  align-items: end;
+  padding-bottom: 4px;
+}
+.rowClues {
+  grid-area: 2 / 1;
+  display: grid;
+  padding-right: 6px;
+}
+.colClue,
+.rowClue {
+  display: flex;
+  font-size: var(--clue-font);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: var(--clue-ink);
+  border-radius: 6px;
+  transition: color 0.2s, background-color 0.15s;
+}
+.colClue {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 3px 0;
+  margin: 0 1px;
+}
+.rowClue {
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--clue-font) * 0.45);
+  padding: 0 6px;
+  margin: 1px 0;
+}
+.done {
+  color: var(--clue-done);
+}
+.active {
+  background: var(--clue-active);
+}
+.hinted {
+  background: color-mix(in srgb, #ffc93c 40%, var(--cell-bg));
+  color: var(--clue-ink);
+}
+
+/* ---------- Cells ---------- */
+.cells {
+  grid-area: 2 / 2;
+  position: relative;
+  display: grid;
+  background: var(--cell-bg);
+  box-shadow: 0 0 0 2px var(--board-frame);
+  border-radius: 2px;
+  touch-action: none;
+  cursor: pointer;
+}
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.cross {
+  background: var(--focus-line);
+}
+.filled {
+  background: var(--ink);
+  animation: pop 0.14s ease-out;
+}
+.filled.cross {
+  background: var(--ink);
+}
+
+.crossed .x {
+  width: 62%;
+  height: 62%;
+  stroke: var(--x-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+  animation: pop 0.14s ease-out;
+}
+.wrong {
+  background: var(--error-text);
+}
+.hintCell {
+  box-shadow: inset 0 0 0 3px #ffb300;
+  z-index: 1;
+}
+.hintBad {
+  box-shadow: inset 0 0 0 3px var(--error-text);
+  z-index: 1;
+  animation: pulse 0.8s ease-in-out 2;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  shape-rendering: crispEdges;
+}
+.thin line {
+  stroke: var(--line-thin);
+  stroke-width: 1;
+}
+.thick line {
+  stroke: var(--line-thick);
+  stroke-width: 2;
+}
+
+/* ---------- Mode toggle ---------- */
+.modes {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.modes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 15px;
+}
+.modes button.modeOn {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.modeFill {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--ink);
+}
+.modeCross {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ---------- Win: the picture takes the game color in a diagonal wave ---------- */
+.won .cells {
+  cursor: default;
+}
+.won .filled {
+  animation: reveal 0.5s ease-out backwards;
+  animation-delay: var(--d);
+  background: var(--game-color);
+}
+.won .crossed .x {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.won .cross {
+  background: transparent;
+}
+.won .filled.cross {
+  background: var(--game-color);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+}
+@keyframes reveal {
+  from {
+    background: var(--ink);
+    transform: scale(0.85);
+  }
+}
+@keyframes pulse {
+  50% {
+    box-shadow: inset 0 0 0 3px transparent;
+  }
+}

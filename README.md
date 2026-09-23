@@ -1,6 +1,6 @@
 # Games Practice
 
-Endless practice rounds of LinkedIn-style daily puzzle games — **Queens, Tango, Zip, Mini Sudoku, Patches, Wend, Crossclimb, Pinpoint** — plus **Wordle**.
+Endless practice rounds of LinkedIn-style daily puzzle games — **Queens, Tango, Zip, Mini Sudoku, Patches, Wend, Crossclimb, Pinpoint** — plus **Wordle** and **Nonogram**.
 Every round is freshly generated, with the same hints the originals offer, a timer, and local streaks and statistics. No login; everything is stored in your browser.
 
 Live site: https://luisfetoga2.github.io/linkedin-practice/

@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 
-export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle';
+export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle' | 'nonogram';
 
 /** A selectable puzzle variant shown on the intro screen (size, difficulty, word length...). */
 export interface GameOption {

@@ -8,8 +8,9 @@ import { meta as queens } from './queens/meta';
 import { meta as pinpoint } from './pinpoint/meta';
 import { meta as crossclimb } from './crossclimb/meta';
 import { meta as wordle } from './wordle/meta';
+import { meta as nonogram } from './nonogram/meta';
 
-/** Home-page order mirrors LinkedIn's games page; Wordle is our extra. */
+/** Home-page order mirrors LinkedIn's games page; Wordle and Nonogram are extras. */
 export const games: GameEntry[] = [
   { meta: wend, load: () => import('./wend/Game') },
   { meta: patches, load: () => import('./patches/Game') },
@@ -20,6 +21,7 @@ export const games: GameEntry[] = [
   { meta: pinpoint, load: () => import('./pinpoint/Game') },
   { meta: crossclimb, load: () => import('./crossclimb/Game') },
   { meta: wordle, load: () => import('./wordle/Game') },
+  { meta: nonogram, load: () => import('./nonogram/Game') },
 ];
 
 export const gameIds = games.map((g) => g.meta.id);
