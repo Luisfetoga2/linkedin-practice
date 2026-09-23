@@ -343,6 +343,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
                 style={{ ...rectStyle(p, n), ...tint(clues[i].color), animationDelay: won ? `${i * 60}ms` : undefined }}
               >
                 <div className={styles.patchInner} />
+                <CellCount rect={p} clue={clues[i]} />
               </div>
             );
           })}
@@ -350,7 +351,9 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
             <div
               className={`${styles.preview}${preview.bad ? ` ${styles.previewBad}` : ''}`}
               style={{ ...rectStyle(preview.rect, n), ...(preview.clue >= 0 ? tint(clues[preview.clue].color) : {}) }}
-            />
+            >
+              {preview.clue >= 0 && !preview.bad && <CellCount rect={preview.rect} clue={clues[preview.clue]} />}
+            </div>
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
           {clues.map((k, i) => (
@@ -365,6 +368,28 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={locked || patches.every((p) => !p)} />
       </ControlBar>
     </div>
+  );
+}
+
+/**
+ * LinkedIn shows each patch's cell count in a small box at its center. When the center lands on
+ * the clue's own cell, nudge it half a cell along the patch's longer side so it doesn't cover the clue.
+ */
+function CellCount({ rect, clue }: { rect: Rect; clue: Clue }) {
+  const w = rect.c1 - rect.c0 + 1;
+  const h = rect.r1 - rect.r0 + 1;
+  let x = 50;
+  let y = 50;
+  const midC = rect.c0 + (w - 1) / 2;
+  const midR = rect.r0 + (h - 1) / 2;
+  if (midC === clue.c && midR === clue.r) {
+    if (w >= h) x += (50 / w) * (clue.c < rect.c1 ? 1 : -1);
+    else y += (50 / h) * (clue.r < rect.r1 ? 1 : -1);
+  }
+  return (
+    <span className={styles.count} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden>
+      {w * h}
+    </span>
   );
 }
 
