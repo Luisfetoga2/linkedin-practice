@@ -149,7 +149,12 @@ interface LengthIndex {
   /** Bitsets: pos[p * 27 + letter] has bit w set when words[w][p] is that letter. */
   pos: Uint32Array[];
   blocks: number;
+  /** Ordering weight per word: low for words made of very common letters (they fit anywhere). */
+  weight: Float64Array;
 }
+
+/** How strongly to push easy-to-cross words back in the candidate order. */
+const GLUE_PENALTY = 1.2;
 
 type WordIndex = Map<number, LengthIndex>;
 
@@ -175,7 +180,16 @@ function buildIndex(entries: readonly ClueEntry[]): WordIndex {
     list.forEach((e, w) => {
       for (let p = 0; p < len; p++) pos[p * 27 + CODE.get(e.word[p])!][w >>> 5] |= 1 << (w & 31);
     });
-    index.set(len, { words: list.map((e) => e.word), clues: list.map((e) => e.clues), pos, blocks });
+    // "Ease" = how likely a random word of this length shares each of its letters in place.
+    const ease = list.map((e) => {
+      let x = 1;
+      for (let p = 0; p < len; p++) x *= popcountArr(pos[p * 27 + CODE.get(e.word[p])!]) / n;
+      return x;
+    });
+    const sorted = [...ease].sort((a, b) => a - b);
+    const median = sorted[sorted.length >> 1] || 1;
+    const weight = Float64Array.from(ease, (x) => Math.pow(Math.max(x, 1e-12) / median, -GLUE_PENALTY / len));
+    index.set(len, { words: list.map((e) => e.word), clues: list.map((e) => e.clues), pos, blocks, weight });
   }
   return index;
 }
@@ -187,6 +201,12 @@ function getIndex(entries: readonly ClueEntry[]): WordIndex {
     indexCache.set(entries, idx);
   }
   return idx;
+}
+
+function popcountArr(a: Uint32Array): number {
+  let n = 0;
+  for (let i = 0; i < a.length; i++) n += popcount(a[i]);
+  return n;
 }
 
 function popcount(x: number): number {
@@ -203,7 +223,13 @@ function popcount(x: number): number {
  * Backtracking fill of one template. Returns the word index chosen per slot, or null when the
  * node budget runs out or the template can't be filled.
  */
-function fill(size: number, blocks: readonly boolean[], index: WordIndex, rng: Rng, budget: number): { slots: Slot[]; words: number[] } | null {
+function fill(
+  size: number,
+  blocks: readonly boolean[],
+  index: WordIndex,
+  rng: Rng,
+  budget: number,
+): { slots: Slot[]; words: number[] } | null {
   const slots = slotsOf(size, blocks);
   const S = slots.length;
   const lens = slots.map((s) => s.cells.length);
@@ -261,7 +287,12 @@ function fill(size: number, blocks: readonly boolean[], index: WordIndex, rng: R
         x ^= low;
       }
     }
-    const order = rng.shuffle(list);
+    // Weighted random order (Efraimidis–Spirakis): easy-to-cross "glue" words are tried later,
+    // so they don't crowd into most puzzles.
+    const order = list
+      .map((w) => ({ w, k: Math.pow(rng.next(), 1 / li.weight[w]) }))
+      .sort((a, b) => b.k - a.k)
+      .map((x) => x.w);
     const cells = slots[best].cells;
     for (const w of order) {
       const word = li.words[w];

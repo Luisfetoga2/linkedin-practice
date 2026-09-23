@@ -15,7 +15,19 @@ import c3b from './clues3_b';
 import c4a from './clues4_a';
 import c5a from './clues5_a';
 import c5b from './clues5_b';
+import ma from './more_a';
+import mb from './more_b';
+import mc from './more_c';
+import md from './more_d';
+import me from './more_e';
+import mf from './more_f';
+import mg from './more_g';
+import mh from './more_h';
 import { parseEntries } from '../parse';
 import type { ClueEntry } from '../types';
 
-export const ENTRIES: ClueEntry[] = parseEntries([c3a, c3b, c4a, c5a, c5b, c4aa, c4ab, c4ac, c4ad, c4ae, c5aa, c5ab, c5ac, c5ad]);
+export const ENTRIES: ClueEntry[] = parseEntries([
+  c3a, c3b, c4a, c5a, c5b, c4aa, c4ab, c4ac, c4ad, c4ae, c5aa, c5ab, c5ac, c5ad,
+  // More clues for existing words (merged into their entries), then new words.
+  ma, mb, mc, md, me, mf, mg, mh,
+]);

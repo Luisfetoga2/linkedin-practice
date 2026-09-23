@@ -5,7 +5,9 @@ import { toast } from '../../core/components/Toast';
 import { useGameSetting } from '../../lib/settings';
 import { entriesIfLoaded, loadEntries, WordsUnavailable, type WordLang } from './data';
 import type { ClueEntry } from './data/types';
-import { generateMini, type MiniClue, type MiniSize } from './generator';
+import { generateMini, type MiniClue, type MiniPuzzle, type MiniSize } from './generator';
+import { freshClues, remember } from './recent';
+import { readJSON, writeJSON } from '../../lib/storage';
 import { afterType, arrow, backspace, clueAt, isFull, isSolved, keyToLetter, landOn, revealTarget, stepClue, type Cursor } from './logic';
 import { Keyboard } from './Keyboard';
 import { STR } from './i18n';
@@ -82,10 +84,24 @@ const CheckIcon = () => (
 
 type Props = GameProps & { wordLang: WordLang; words: ClueEntry[] };
 
+/** Rotated puzzles for this session, so re-renders (and React's dev double-render) don't re-rotate. */
+const ROTATED = new Map<string, MiniPuzzle>();
+
 function Board({ seed, lang, options, paused, onReady, onHint, onComplete, wordLang, words }: Props) {
   const t = STR[lang];
   const size: MiniSize = options.size === '4' ? 4 : 5;
-  const puzzle = useMemo(() => generateMini(seed, size, words), [seed, size, words]);
+  // The grid comes from the seed; clues this device showed recently rotate to unseen ones.
+  const puzzle = useMemo(() => {
+    const key = `${wordLang}:${size}:${seed}`;
+    const cached = ROTATED.get(key);
+    if (cached) return cached;
+    const p = generateMini(seed, size, words);
+    const recent = readJSON<string[]>(`mini-recent-clues:${wordLang}`, []);
+    const q = freshClues(p, words, recent);
+    writeJSON(`mini-recent-clues:${wordLang}`, remember(q, recent));
+    ROTATED.set(key, q);
+    return q;
+  }, [seed, size, words, wordLang]);
   const N = puzzle.size;
   const cellCount = N * N;
   const [autoCheck] = useGameSetting<boolean>('mini', 'autoCheck', false);
