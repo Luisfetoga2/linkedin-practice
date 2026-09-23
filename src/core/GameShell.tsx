@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import type { GameEntry, GameProps, GameResult } from './types';
+import type { GameEntry, GameProps, GameResult, GameSettingDef } from './types';
 import { Stopwatch } from './stopwatch';
 import { Timer } from './components/Timer';
 import { ArrowLeft, Chart, Gear, Help, Play, Shuffle } from './components/Icons';
@@ -12,16 +12,20 @@ import { addRecord, computeStats, loadHistory, useHistory, variantKey } from '..
 import { formatTime } from '../lib/time';
 import { useAppSettings, useGameSetting } from '../lib/settings';
 import { readJSON, writeJSON } from '../lib/storage';
+import { pick, type Lang } from '../lib/i18n';
+import { useCore } from '../i18n/core';
 
 type Phase = 'intro' | 'playing' | 'done';
 
-function defaultOptions(entry: GameEntry, params: URLSearchParams): Record<string, string> {
+function defaultOptions(entry: GameEntry, params: URLSearchParams, lang: Lang): Record<string, string> {
   const saved = readJSON<Record<string, string>>(`last-options:${entry.meta.id}`, {});
   const out: Record<string, string> = {};
   for (const opt of entry.meta.options ?? []) {
     const fromUrl = params.get(opt.id);
     const valid = (v: string | null | undefined) => !!v && opt.choices.some((c) => c.value === v);
-    out[opt.id] = valid(fromUrl) ? fromUrl! : valid(saved[opt.id]) ? saved[opt.id] : opt.default;
+    if (valid(fromUrl)) out[opt.id] = fromUrl!;
+    else if (opt.followsLanguage) out[opt.id] = valid(lang) ? lang : opt.default;
+    else out[opt.id] = valid(saved[opt.id]) ? saved[opt.id] : opt.default;
   }
   return out;
 }
@@ -30,9 +34,12 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   const { meta } = entry;
   const route = useRoute();
   const [settings] = useAppSettings();
+  const { t, lang } = useCore();
+  const name = pick(meta.name, lang);
+  const englishOnly = !!meta.contentLanguages && !meta.contentLanguages.includes(lang);
   const Game = useMemo(() => lazy(entry.load) as unknown as ComponentType<GameProps>, [entry]);
 
-  const [options, setOptions] = useState(() => defaultOptions(entry, route.params));
+  const [options, setOptions] = useState(() => defaultOptions(entry, route.params, lang));
   const [seed, setSeed] = useState<number>(() => codeToSeed(route.params.get('s')) ?? randomSeed());
   const [phase, setPhase] = useState<Phase>('intro');
   const [round, setRound] = useState(0);
@@ -165,7 +172,10 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   }, [modal, phase, ready, paused, watch]);
 
   const optionLabel = (meta.options ?? [])
-    .map((o) => o.choices.find((c) => c.value === options[o.id])?.label)
+    .map((o) => {
+      const label = o.choices.find((c) => c.value === options[o.id])?.label;
+      return label === undefined ? undefined : pick(label, lang);
+    })
     .filter(Boolean)
     .join(' · ');
 
@@ -175,23 +185,23 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     <div className="lp-shell" style={style}>
       <header className="lp-topbar">
         <div className="lp-topbar-inner">
-          <a className="icon-btn" href={href('')} aria-label="Back to games">
+          <a className="icon-btn" href={href('')} aria-label={t.backToGames}>
             <ArrowLeft size={22} />
           </a>
           <div className="lp-topbar-title">
             <span className="lp-topbar-badge" aria-hidden>
               <meta.Icon size={20} />
             </span>
-            <h1>{meta.name}</h1>
+            <h1>{name}</h1>
           </div>
           <div className="lp-topbar-actions">
-            <button className="icon-btn" onClick={() => setModal('help')} aria-label="How to play" title="How to play">
+            <button className="icon-btn" onClick={() => setModal('help')} aria-label={t.howToPlay} title={t.howToPlay}>
               <Help size={22} />
             </button>
-            <a className="icon-btn" href={href(`stats/${meta.id}`)} aria-label="Statistics" title="Statistics">
+            <a className="icon-btn" href={href(`stats/${meta.id}`)} aria-label={t.statistics} title={t.statistics}>
               <Chart size={22} />
             </a>
-            <button className="icon-btn" onClick={() => setModal('settings')} aria-label="Settings" title="Settings">
+            <button className="icon-btn" onClick={() => setModal('settings')} aria-label={t.settings} title={t.settings}>
               <Gear size={22} />
             </button>
           </div>
@@ -204,29 +214,30 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             <div className="lp-intro-icon">
               <meta.Icon size={72} />
             </div>
-            <h2 className="lp-intro-name">{meta.name}</h2>
-            <p className="lp-intro-tagline">{meta.tagline}</p>
-            <p className="lp-intro-code">PRACTICE #{seedToCode(seed)}</p>
+            <h2 className="lp-intro-name">{name}</h2>
+            <p className="lp-intro-tagline">{pick(meta.tagline, lang)}</p>
+            <p className="lp-intro-code">{t.practiceCode(seedToCode(seed)).toUpperCase()}</p>
+            {englishOnly && <p className="lp-intro-note">{t.englishOnly}</p>}
             {(meta.options ?? []).map((opt) => (
               <div key={opt.id} className="lp-intro-option">
-                <span className="lp-intro-option-label">{opt.label}</span>
+                <span className="lp-intro-option-label">{pick(opt.label, lang)}</span>
                 <Segmented
                   tone="onColor"
-                  label={opt.label}
+                  label={pick(opt.label, lang)}
                   value={options[opt.id]}
-                  choices={opt.choices}
+                  choices={opt.choices.map((c) => ({ value: c.value, label: pick(c.label, lang) }))}
                   onChange={(v) => setOptions({ ...options, [opt.id]: v })}
                 />
               </div>
             ))}
             <button className="lp-intro-start" onClick={() => begin(seed, options)}>
-              Start game
+              {t.startGame}
             </button>
             <div className="lp-intro-stats">
-              {stats.streak.current > 0 && <span>🔥 {stats.streak.current}-day streak</span>}
-              {stats.bestMs !== null && <span>Best {formatTime(stats.bestMs)}</span>}
-              {meta.scoring === 'guesses' && stats.played > 0 && <span>{Math.round(stats.winRate * 100)}% wins</span>}
-              <span>{stats.wins} solved</span>
+              {stats.streak.current > 0 && <span>{t.dayStreak(stats.streak.current)}</span>}
+              {stats.bestMs !== null && <span>{t.bestTime(formatTime(stats.bestMs))}</span>}
+              {meta.scoring === 'guesses' && stats.played > 0 && <span>{t.winsPct(Math.round(stats.winRate * 100))}</span>}
+              <span>{t.solvedCount(stats.wins)}</span>
             </div>
           </div>
         </section>
@@ -237,27 +248,29 @@ export function GameShell({ entry }: { entry: GameEntry }) {
               {settings.showTimer || phase === 'done' ? (
                 <Timer watch={watch} paused={paused} onToggle={togglePause} disabled={phase === 'done' || !ready} />
               ) : (
-                <button className="lp-timer" onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
-                  {paused ? 'Resume' : 'Pause'}
+                <button className="lp-timer" onClick={togglePause} aria-label={paused ? t.resume : t.pause}>
+                  {paused ? t.resume : t.pause}
                 </button>
               )}
               <div className="lp-play-bar-right">
                 {meta.options?.length ? (
-                  <button className="lp-chip" onClick={() => setModal('variant')} title="Change puzzle type">
+                  <button className="lp-chip" onClick={() => setModal('variant')} title={t.changeType}>
                     {optionLabel}
                   </button>
                 ) : null}
-                <button className="lp-chip" onClick={() => newRound()} title="Skip to a new puzzle">
-                  <Shuffle size={14} /> New
+                <button className="lp-chip" onClick={() => newRound()} title={t.newPuzzleTitle}>
+                  <Shuffle size={14} /> {t.newPuzzle}
                 </button>
               </div>
             </div>
 
+            {englishOnly && <p className="lp-lang-note">{t.englishOnly}</p>}
             <div className={`lp-board-area${paused ? ' is-paused' : ''}`}>
-              <Suspense fallback={<div className="lp-loading">Loading…</div>}>
+              <Suspense fallback={<div className="lp-loading">{t.loading}</div>}>
                 <Game
-                  key={round}
+                  key={`${round}-${lang}`}
                   seed={seed}
+                  lang={lang}
                   options={options}
                   paused={paused || phase === 'done'}
                   onReady={onReady}
@@ -267,9 +280,9 @@ export function GameShell({ entry }: { entry: GameEntry }) {
               </Suspense>
               {paused && (
                 <div className="lp-paused">
-                  <p className="lp-paused-title">Paused</p>
+                  <p className="lp-paused-title">{t.paused}</p>
                   <button className="btn btn-primary" onClick={togglePause}>
-                    <Play size={16} /> Resume
+                    <Play size={16} /> {t.resume}
                   </button>
                 </div>
               )}
@@ -278,20 +291,20 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             {phase === 'done' && finished && !showResult && (
               <div className="lp-done-bar">
                 <span>
-                  {finished.result.won ? 'Solved' : 'Finished'} in <strong>{formatTime(finished.ms)}</strong>
+                  {finished.result.won ? t.solvedIn : t.finishedIn} <strong>{formatTime(finished.ms)}</strong>
                 </span>
                 <div className="lp-done-actions">
                   <button className="btn btn-secondary btn-sm" onClick={() => setShowResult(true)}>
-                    Results
+                    {t.results}
                   </button>
                   <button className="btn btn-primary btn-sm" onClick={() => newRound()}>
-                    Play again
+                    {t.playAgain}
                   </button>
                 </div>
               </div>
             )}
             <p className="lp-play-code">
-              Practice #{seedToCode(seed)} · <a href={`${href(meta.id, { s: seedToCode(seed), ...options })}`}>link to this puzzle</a>
+              {t.practiceCode(seedToCode(seed))} · <a href={`${href(meta.id, { s: seedToCode(seed), ...options })}`}>{t.linkToPuzzle}</a>
             </p>
           </div>
         </main>
@@ -307,15 +320,15 @@ export function GameShell({ entry }: { entry: GameEntry }) {
         />
       )}
 
-      <Modal open={modal === 'help'} onClose={() => setModal(null)} title={`How to play ${meta.name}`}>
-        <div className="lp-howto">{meta.howToPlay}</div>
+      <Modal open={modal === 'help'} onClose={() => setModal(null)} title={t.howToPlayTitle(name)}>
+        <div className="lp-howto">{pick(meta.howToPlay, lang)}</div>
       </Modal>
 
-      <Modal open={modal === 'settings'} onClose={() => setModal(null)} title="Settings">
+      <Modal open={modal === 'settings'} onClose={() => setModal(null)} title={t.settings}>
         <SettingsPanel gameId={meta.id} defs={meta.settings ?? []} />
       </Modal>
 
-      <Modal open={modal === 'variant'} onClose={() => setModal(null)} title="Puzzle type">
+      <Modal open={modal === 'variant'} onClose={() => setModal(null)} title={t.puzzleType}>
         <VariantPicker
           entry={entry}
           current={options}
@@ -331,58 +344,88 @@ export function GameShell({ entry }: { entry: GameEntry }) {
 
 function VariantPicker({ entry, current, onPick }: { entry: GameEntry; current: Record<string, string>; onPick(o: Record<string, string>): void }) {
   const [draft, setDraft] = useState(current);
+  const { t, lang } = useCore();
   return (
     <div className="lp-variant">
       {(entry.meta.options ?? []).map((opt) => (
         <div key={opt.id} className="lp-variant-row">
-          <span className="lp-variant-label">{opt.label}</span>
-          <Segmented label={opt.label} value={draft[opt.id]} choices={opt.choices} onChange={(v) => setDraft({ ...draft, [opt.id]: v })} />
+          <span className="lp-variant-label">{pick(opt.label, lang)}</span>
+          <Segmented
+            label={pick(opt.label, lang)}
+            value={draft[opt.id]}
+            choices={opt.choices.map((c) => ({ value: c.value, label: pick(c.label, lang) }))}
+            onChange={(v) => setDraft({ ...draft, [opt.id]: v })}
+          />
         </div>
       ))}
       <button className="btn btn-primary btn-block" onClick={() => onPick(draft)}>
-        Start new puzzle
+        {t.startNewPuzzle}
       </button>
     </div>
   );
 }
 
-function GameSettingToggle({ gameId, def }: { gameId: string; def: { key: string; label: string; description?: string; default: boolean } }) {
+function GameSettingToggle({ gameId, def }: { gameId: string; def: GameSettingDef }) {
   const [value, set] = useGameSetting<boolean>(gameId, def.key, def.default);
-  return <Toggle checked={value} onChange={set} label={def.label} description={def.description} />;
+  const { lang } = useCore();
+  return (
+    <Toggle
+      checked={value}
+      onChange={set}
+      label={pick(def.label, lang)}
+      description={def.description === undefined ? undefined : pick(def.description, lang)}
+    />
+  );
 }
 
-export function SettingsPanel({ gameId, defs }: { gameId?: string; defs: { key: string; label: string; description?: string; default: boolean }[] }) {
+export function SettingsPanel({ gameId, defs }: { gameId?: string; defs: GameSettingDef[] }) {
   const [settings, update] = useAppSettings();
+  const { t } = useCore();
   return (
     <div className="lp-settings">
       {gameId && defs.length > 0 && (
         <section>
-          <h3 className="lp-settings-heading">This game</h3>
+          <h3 className="lp-settings-heading">{t.thisGame}</h3>
           {defs.map((d) => (
             <GameSettingToggle key={d.key} gameId={gameId} def={d} />
           ))}
         </section>
       )}
       <section>
-        <h3 className="lp-settings-heading">General</h3>
+        <h3 className="lp-settings-heading">{t.general}</h3>
         <div className="lp-toggle-row">
           <span className="lp-toggle-text">
-            <span className="lp-toggle-label">Theme</span>
+            <span className="lp-toggle-label">{t.language}</span>
           </span>
           <Segmented
-            label="Theme"
-            value={settings.theme}
-            onChange={(theme) => update({ theme })}
+            label={t.language}
+            value={settings.language}
+            onChange={(language) => update({ language })}
             choices={[
-              { value: 'system', label: 'Auto' },
-              { value: 'light', label: 'Light' },
-              { value: 'dark', label: 'Dark' },
+              { value: 'auto', label: t.languageAuto },
+              { value: 'en', label: 'English' },
+              { value: 'es', label: 'Español' },
             ]}
           />
         </div>
-        <Toggle checked={settings.showTimer} onChange={(showTimer) => update({ showTimer })} label="Show timer" description="The clock still runs and is saved when hidden." />
-        <Toggle checked={settings.autoPause} onChange={(autoPause) => update({ autoPause })} label="Auto-pause" description="Stop the clock when you switch tabs or apps." />
-        <Toggle checked={settings.skipIntro} onChange={(skipIntro) => update({ skipIntro })} label="Quick replay" description="“Play again” jumps straight into a new puzzle." />
+        <div className="lp-toggle-row">
+          <span className="lp-toggle-text">
+            <span className="lp-toggle-label">{t.theme}</span>
+          </span>
+          <Segmented
+            label={t.theme}
+            value={settings.theme}
+            onChange={(theme) => update({ theme })}
+            choices={[
+              { value: 'system', label: t.themeAuto },
+              { value: 'light', label: t.themeLight },
+              { value: 'dark', label: t.themeDark },
+            ]}
+          />
+        </div>
+        <Toggle checked={settings.showTimer} onChange={(showTimer) => update({ showTimer })} label={t.showTimer} description={t.showTimerDesc} />
+        <Toggle checked={settings.autoPause} onChange={(autoPause) => update({ autoPause })} label={t.autoPause} description={t.autoPauseDesc} />
+        <Toggle checked={settings.skipIntro} onChange={(skipIntro) => update({ skipIntro })} label={t.quickReplay} description={t.quickReplayDesc} />
       </section>
     </div>
   );

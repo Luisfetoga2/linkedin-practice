@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStoredState } from './storage';
 
 export type Theme = 'system' | 'light' | 'dark';
+export type LanguagePref = 'auto' | 'en' | 'es';
 
 export interface AppSettings {
   theme: Theme;
@@ -10,6 +11,8 @@ export interface AppSettings {
   autoPause: boolean;
   /** Skip the intro card when pressing "Play again". */
   skipIntro: boolean;
+  /** Interface language; 'auto' follows the browser. */
+  language: LanguagePref;
 }
 
 export const defaultSettings: AppSettings = {
@@ -17,6 +20,7 @@ export const defaultSettings: AppSettings = {
   showTimer: true,
   autoPause: true,
   skipIntro: true,
+  language: 'auto',
 };
 
 export function useAppSettings(): [AppSettings, (patch: Partial<AppSettings>) => void] {

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useCore } from '../../i18n/core';
 
 /** Row of pill buttons under a board (Undo / Hint / Clear), LinkedIn style. */
 export function ControlBar({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ export function ControlButton({ icon, label, onClick, disabled, active, badge }:
 
 /** Speech-bubble style hint message shown near the board. */
 export function HintBubble({ children, onDismiss }: { children: ReactNode; onDismiss?(): void }) {
+  const { t } = useCore();
   return (
     <div className="lp-hint" role="status">
       <span className="lp-hint-icon" aria-hidden>
@@ -44,7 +46,7 @@ export function HintBubble({ children, onDismiss }: { children: ReactNode; onDis
       </span>
       <div className="lp-hint-text">{children}</div>
       {onDismiss && (
-        <button className="lp-hint-close" onClick={onDismiss} aria-label="Dismiss hint">
+        <button className="lp-hint-close" onClick={onDismiss} aria-label={t.dismissHint}>
           ×
         </button>
       )}

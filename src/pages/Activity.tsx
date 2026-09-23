@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { addDays, dayKey } from '../lib/time';
+import { formatDate } from '../lib/i18n';
+import { useCore } from '../i18n/core';
 
 function level(n: number): number {
   if (n === 0) return 0;
@@ -12,6 +14,7 @@ function level(n: number): number {
 /** GitHub-style calendar of wins per day, single-hue sequential scale. */
 export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number>; weeks?: number }) {
   const [hover, setHover] = useState<{ key: string; n: number; x: number; y: number } | null>(null);
+  const { t, lang } = useCore();
   const cols = useMemo(() => {
     const today = dayKey();
     const d = new Date();
@@ -39,7 +42,7 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
   return (
     <div className="heatmap">
       <div className="heatmap-scroll">
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Games solved per day">
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t.solvesPerDay}>
           {cols.map((col, w) =>
             col.map((c, r) =>
               c.future ? null : (
@@ -60,19 +63,19 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
         </svg>
         {hover && (
           <div className="chart-tip" style={{ left: hover.x, top: hover.y }}>
-            <strong>{hover.n === 0 ? 'No solves' : `${hover.n} solved`}</strong>
-            <span>{new Date(hover.key + 'T12:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <strong>{hover.n === 0 ? t.noSolves : t.nSolved(hover.n)}</strong>
+            <span>{formatDate(new Date(hover.key + 'T12:00'), lang, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
           </div>
         )}
       </div>
       <div className="heatmap-legend" aria-hidden>
-        <span>Less</span>
+        <span>{t.less}</span>
         {[0, 1, 2, 3, 4].map((l) => (
           <svg key={l} width="11" height="11">
             <rect width="11" height="11" rx="2" className={`heat-${l}`} />
           </svg>
         ))}
-        <span>More</span>
+        <span>{t.more}</span>
       </div>
     </div>
   );

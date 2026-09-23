@@ -11,10 +11,13 @@ import { Flame } from '../core/components/Icons';
 import { toast } from '../core/components/Toast';
 import { SiteFooter, SiteHeader } from './SiteHeader';
 import { ActivityHeatmap } from './Activity';
+import { formatClock, formatDate, pick, type Lang } from '../lib/i18n';
+import { useCore, type CoreStrings } from '../i18n/core';
 
 export function StatsPage({ gameId }: { gameId?: string }) {
   const histories = useAllHistories(gameIds);
   const entry = findGame(gameId);
+  const { t, lang } = useCore();
   const winDays = useMemo(() => winDaysFrom(histories), [histories]);
   const streak = dayStreak(winDays.keys());
   const total = Object.values(histories).reduce((a, h) => a + h.length, 0);
@@ -27,25 +30,25 @@ export function StatsPage({ gameId }: { gameId?: string }) {
         <div className="stats-wrap">
           <section className="card stats-overview">
             <div className="stats-overview-kpis">
-              <Kpi label="Current streak" value={<><Flame size={18} className="kpi-flame" /> {streak.current}</>} />
-              <Kpi label="Best streak" value={streak.max} />
-              <Kpi label="Puzzles solved" value={wins} />
-              <Kpi label="Rounds played" value={total} />
-              <Kpi label="Days active" value={winDays.size} />
+              <Kpi label={t.currentStreak} value={<><Flame size={18} className="kpi-flame" /> {streak.current}</>} />
+              <Kpi label={t.bestStreak} value={streak.max} />
+              <Kpi label={t.puzzlesSolved} value={wins} />
+              <Kpi label={t.roundsPlayed} value={total} />
+              <Kpi label={t.daysActive} value={winDays.size} />
             </div>
             <ActivityHeatmap days={winDays} weeks={26} />
           </section>
 
-          <nav className="stats-tabs" aria-label="Choose a game">
+          <nav className="stats-tabs" aria-label={t.chooseGame}>
             <a className={`stats-tab${!entry ? ' is-on' : ''}`} href={href('stats')}>
-              All games
+              {t.allGames}
             </a>
             {games.map(({ meta }) => (
               <a key={meta.id} className={`stats-tab${entry?.meta.id === meta.id ? ' is-on' : ''}`} href={href(`stats/${meta.id}`)}>
                 <span className="stats-tab-icon" style={{ background: meta.tint }}>
                   <meta.Icon size={18} />
                 </span>
-                {meta.name}
+                {pick(meta.name, lang)}
               </a>
             ))}
           </nav>
@@ -71,6 +74,7 @@ function Kpi({ label, value, sub }: { label: string; value: React.ReactNode; sub
 }
 
 function AllGames({ histories }: { histories: Record<string, PlayRecord[]> }) {
+  const { t, lang } = useCore();
   return (
     <div className="stats-cards">
       {games.map(({ meta }) => {
@@ -82,29 +86,29 @@ function AllGames({ histories }: { histories: Record<string, PlayRecord[]> }) {
                 <meta.Icon size={32} />
               </span>
               <div>
-                <div className="stats-card-name">{meta.name}</div>
-                <div className="stats-card-sub">{s.played ? `${s.played} played` : 'Not played yet'}</div>
+                <div className="stats-card-name">{pick(meta.name, lang)}</div>
+                <div className="stats-card-sub">{s.played ? t.nPlayed(s.played) : t.notPlayed}</div>
               </div>
             </div>
             <div className="stats-card-kpis">
               <div>
                 <strong>{s.streak.current}</strong>
-                <span>Streak</span>
+                <span>{t.streak}</span>
               </div>
               {meta.scoring === 'time' ? (
                 <div>
                   <strong>{s.bestMs !== null ? formatTime(s.bestMs) : '–'}</strong>
-                  <span>Best</span>
+                  <span>{t.best}</span>
                 </div>
               ) : (
                 <div>
                   <strong>{s.played ? `${Math.round(s.winRate * 100)}%` : '–'}</strong>
-                  <span>Win rate</span>
+                  <span>{t.winRate}</span>
                 </div>
               )}
               <div>
                 <strong>{s.avgMs !== null ? formatTime(s.avgMs) : '–'}</strong>
-                <span>Average</span>
+                <span>{t.average}</span>
               </div>
             </div>
           </a>
@@ -114,17 +118,22 @@ function AllGames({ histories }: { histories: Record<string, PlayRecord[]> }) {
   );
 }
 
-function variantLabel(entry: GameEntry, variant: string): string {
-  if (!variant) return 'Standard';
+function variantLabel(entry: GameEntry, variant: string, t: CoreStrings, lang: Lang): string {
+  if (!variant) return t.standard;
   const parts = new URLSearchParams(variant);
   return (entry.meta.options ?? [])
-    .map((o) => o.choices.find((c) => c.value === parts.get(o.id))?.label ?? parts.get(o.id))
+    .map((o) => {
+      const label = o.choices.find((c) => c.value === parts.get(o.id))?.label;
+      return label === undefined ? parts.get(o.id) : pick(label, lang);
+    })
     .filter(Boolean)
     .join(' · ');
 }
 
 function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayRecord[] }) {
   const { meta } = entry;
+  const { t, lang } = useCore();
+  const name = pick(meta.name, lang);
   const variants = useMemo(() => [...new Set(history.map((r) => r.variant))].sort(), [history]);
   const [variant, setVariant] = useState<string>('*');
   const active = variant === '*' || !variants.includes(variant) ? undefined : variant;
@@ -133,9 +142,9 @@ function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayReco
   const guessGame = meta.scoring === 'guesses';
 
   const resetGame = () => {
-    if (confirm(`Delete all ${meta.name} history on this device? This can't be undone.`)) {
+    if (confirm(t.resetConfirm(name))) {
       clearHistory(meta.id);
-      toast(`${meta.name} stats reset`);
+      toast(t.resetDone(name));
     }
   };
 
@@ -146,55 +155,55 @@ function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayReco
           <meta.Icon size={36} />
         </span>
         <div className="stats-game-title">
-          <h2>{meta.name}</h2>
-          <p>{meta.tagline}</p>
+          <h2>{name}</h2>
+          <p>{pick(meta.tagline, lang)}</p>
         </div>
         <a className="btn btn-primary btn-sm" href={href(meta.id)}>
-          Play
+          {t.play}
         </a>
       </div>
 
       {variants.length > 1 && (
         <div className="stats-filter">
           <Segmented
-            label="Puzzle type"
+            label={t.puzzleType}
             value={active ?? '*'}
             onChange={setVariant}
-            choices={[{ value: '*', label: 'All' }, ...variants.map((v) => ({ value: v, label: variantLabel(entry, v) }))]}
+            choices={[{ value: '*', label: t.all }, ...variants.map((v) => ({ value: v, label: variantLabel(entry, v, t, lang) }))]}
           />
         </div>
       )}
 
       {s.played === 0 ? (
         <div className="stats-empty">
-          <p>No rounds yet. Play one to start tracking your times.</p>
+          <p>{t.noRounds}</p>
         </div>
       ) : (
         <>
           <div className="stats-kpis">
-            <Kpi label="Played" value={s.played} />
-            <Kpi label={guessGame ? 'Win rate' : 'Solved'} value={guessGame ? `${Math.round(s.winRate * 100)}%` : s.wins} />
-            <Kpi label="Day streak" value={s.streak.current} sub={`Best ${s.streak.max}`} />
+            <Kpi label={t.played} value={s.played} />
+            <Kpi label={guessGame ? t.winRate : t.solved} value={guessGame ? `${Math.round(s.winRate * 100)}%` : s.wins} />
+            <Kpi label={t.dayStreakLabel} value={s.streak.current} sub={t.bestN(s.streak.max)} />
             {guessGame ? (
-              <Kpi label="Win streak" value={s.winStreak} sub={`Best ${s.maxWinStreak}`} />
+              <Kpi label={t.winStreak} value={s.winStreak} sub={t.bestN(s.maxWinStreak)} />
             ) : (
-              <Kpi label="Best time" value={s.bestMs !== null ? formatTime(s.bestMs) : '–'} />
+              <Kpi label={t.bestTimeLabel} value={s.bestMs !== null ? formatTime(s.bestMs) : '–'} />
             )}
-            <Kpi label="Average" value={s.avgMs !== null ? formatTime(s.avgMs) : '–'} />
-            <Kpi label="Median" value={s.medianMs !== null ? formatTime(s.medianMs) : '–'} />
-            <Kpi label="Last 10 avg" value={s.last10AvgMs !== null ? formatTime(s.last10AvgMs) : '–'} />
+            <Kpi label={t.average} value={s.avgMs !== null ? formatTime(s.avgMs) : '–'} />
+            <Kpi label={t.median} value={s.medianMs !== null ? formatTime(s.medianMs) : '–'} />
+            <Kpi label={t.last10} value={s.last10AvgMs !== null ? formatTime(s.last10AvgMs) : '–'} />
             {guessGame ? (
-              <Kpi label="Avg guesses" value={s.avgGuesses !== null ? s.avgGuesses.toFixed(2) : '–'} />
+              <Kpi label={t.avgGuesses} value={s.avgGuesses !== null ? s.avgGuesses.toLocaleString(lang === 'es' ? 'es-419' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 }) : '–'} />
             ) : (
-              <Kpi label="Hint-free" value={s.cleanWins} sub={`${s.hintsUsed} hints used`} />
+              <Kpi label={t.hintFree} value={s.cleanWins} sub={t.hintsUsed(s.hintsUsed)} />
             )}
           </div>
 
           <div className="stats-charts">
             <figure className="chart-block">
               <figcaption>
-                <span className="chart-title">Solve times</span>
-                <span className="chart-sub">Last {Math.min(30, recs.filter((r) => r.won).length)} solves · dashed line is your average</span>
+                <span className="chart-title">{t.solveTimes}</span>
+                <span className="chart-sub">{t.solveTimesSub(Math.min(30, recs.filter((r) => r.won).length))}</span>
               </figcaption>
               <TimesChart records={recs.filter((r) => r.won).slice(-30)} avgMs={s.avgMs} entry={entry} />
             </figure>
@@ -202,16 +211,16 @@ function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayReco
               {guessGame ? (
                 <>
                   <figcaption>
-                    <span className="chart-title">Guess distribution</span>
-                    <span className="chart-sub">Wins by number of guesses</span>
+                    <span className="chart-title">{t.guessDistribution}</span>
+                    <span className="chart-sub">{t.guessDistributionSub}</span>
                   </figcaption>
                   <GuessDist dist={s.guessDist} max={meta.maxGuesses ?? 6} losses={s.played - s.wins} />
                 </>
               ) : (
                 <>
                   <figcaption>
-                    <span className="chart-title">Time distribution</span>
-                    <span className="chart-sub">How often you finish in each time range</span>
+                    <span className="chart-title">{t.timeDistribution}</span>
+                    <span className="chart-sub">{t.timeDistributionSub}</span>
                   </figcaption>
                   <TimeHistogram times={recs.filter((r) => r.won).map((r) => r.ms)} />
                 </>
@@ -225,7 +234,7 @@ function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayReco
       {history.length > 0 && (
         <div className="stats-danger">
           <button className="btn btn-tertiary btn-sm" onClick={resetGame}>
-            Reset {meta.name} stats
+            {t.resetGame(name)}
           </button>
         </div>
       )}
@@ -240,6 +249,7 @@ function niceStep(maxMs: number): number {
 
 function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: number | null; entry: GameEntry }) {
   const [hover, setHover] = useState<number | null>(null);
+  const { t, lang } = useCore();
   const wrap = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(480);
   useEffect(() => {
@@ -249,7 +259,7 @@ function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: n
     ro.observe(el);
     return () => ro.disconnect();
   }, [records.length === 0]);
-  if (records.length === 0) return <p className="chart-empty">No solves yet.</p>;
+  if (records.length === 0) return <p className="chart-empty">{t.noSolvesYet}</p>;
   const H = 180;
   const padL = 40;
   const padB = 6;
@@ -265,7 +275,7 @@ function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: n
 
   return (
     <div className="chart" ref={wrap}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" role="img" aria-label="Recent solve times">
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" role="img" aria-label={t.recentSolveTimes}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={padL} x2={W} y1={y(t)} y2={y(t)} className={t === 0 ? 'chart-baseline' : 'chart-grid'} />
@@ -298,9 +308,9 @@ function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: n
           }}
         >
           <strong>{formatTime(records[hover].ms)}</strong>
-          <span>{new Date(records[hover].at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-          <span>{variantLabel(entry, records[hover].variant)}</span>
-          {records[hover].hints > 0 && <span>{records[hover].hints} hints</span>}
+          <span>{formatDate(records[hover].at, lang, { month: 'short', day: 'numeric' })}</span>
+          <span>{variantLabel(entry, records[hover].variant, t, lang)}</span>
+          {records[hover].hints > 0 && <span>{t.hintsCount(records[hover].hints)}</span>}
         </div>
       )}
     </div>
@@ -309,7 +319,8 @@ function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: n
 
 function TimeHistogram({ times }: { times: number[] }) {
   const [hover, setHover] = useState<number | null>(null);
-  if (times.length === 0) return <p className="chart-empty">No solves yet.</p>;
+  const { t } = useCore();
+  if (times.length === 0) return <p className="chart-empty">{t.noSolvesYet}</p>;
   const max = Math.max(...times);
   const candidates = [10, 15, 30, 60, 120, 300, 600].map((s) => s * 1000);
   const bucket = candidates.find((b) => max / b <= 8) ?? 600_000;
@@ -353,31 +364,32 @@ function GuessDist({ dist, max, losses }: { dist: number[]; max: number; losses:
   );
 }
 
-function when(at: number): string {
+function when(at: number, t: CoreStrings, lang: Lang): string {
   const d = new Date(at);
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
-  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  return sameDay ? `Today ${time}` : `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${time}`;
+  const time = formatClock(d, lang);
+  return sameDay ? t.todayAt(time) : `${formatDate(d, lang, { month: 'short', day: 'numeric' })} ${time}`;
 }
 
 function RecentTable({ entry, records }: { entry: GameEntry; records: PlayRecord[] }) {
   const guessGame = entry.meta.scoring === 'guesses';
+  const { t, lang } = useCore();
   return (
     <div className="recent">
-      <h3 className="chart-title">Recent rounds</h3>
+      <h3 className="chart-title">{t.recentRounds}</h3>
       <div className="recent-scroll">
         <table className="recent-table">
           <thead>
             <tr>
-              <th>When</th>
-              <th>Puzzle</th>
-              <th className="num">Time</th>
-              {guessGame && <th className="num">Guesses</th>}
-              <th className="num">Hints</th>
-              <th>Result</th>
+              <th>{t.colWhen}</th>
+              <th>{t.colPuzzle}</th>
+              <th className="num">{t.colTime}</th>
+              {guessGame && <th className="num">{t.colGuesses}</th>}
+              <th className="num">{t.colHints}</th>
+              <th>{t.colResult}</th>
               <th>
-                <span className="visually-hidden">Replay</span>
+                <span className="visually-hidden">{t.replay}</span>
               </th>
             </tr>
           </thead>
@@ -386,14 +398,14 @@ function RecentTable({ entry, records }: { entry: GameEntry; records: PlayRecord
               const opts = Object.fromEntries(new URLSearchParams(r.variant));
               return (
                 <tr key={r.at}>
-                  <td>{when(r.at)}</td>
-                  <td>{variantLabel(entry, r.variant)}</td>
+                  <td>{when(r.at, t, lang)}</td>
+                  <td>{variantLabel(entry, r.variant, t, lang)}</td>
                   <td className="num">{formatTime(r.ms)}</td>
                   {guessGame && <td className="num">{r.won ? r.guesses : '–'}</td>}
                   <td className="num">{r.hints}</td>
-                  <td>{r.won ? <span className="tag tag-good">Solved</span> : <span className="tag">Missed</span>}</td>
+                  <td>{r.won ? <span className="tag tag-good">{t.solved}</span> : <span className="tag">{t.missed}</span>}</td>
                   <td>
-                    <a href={href(entry.meta.id, { s: seedToCode(r.seed), ...opts })}>Replay</a>
+                    <a href={href(entry.meta.id, { s: seedToCode(r.seed), ...opts })}>{t.replay}</a>
                   </td>
                 </tr>
               );
@@ -407,6 +419,7 @@ function RecentTable({ entry, records }: { entry: GameEntry; records: PlayRecord
 
 function DataTools() {
   const file = useRef<HTMLInputElement>(null);
+  const { t } = useCore();
   const exportData = () => {
     const data: Record<string, unknown> = {};
     for (const k of allKeys()) data[k] = readJSON(k, null);
@@ -423,25 +436,25 @@ function DataTools() {
     try {
       const parsed = JSON.parse(await f.text());
       if (parsed?.app !== 'games-practice' || typeof parsed.data !== 'object') throw new Error('bad file');
-      if (!confirm('Replace the stats on this device with the imported file?')) return;
+      if (!confirm(t.importConfirm)) return;
       for (const [k, v] of Object.entries(parsed.data)) writeJSON(k, v);
-      toast('Stats imported');
+      toast(t.imported);
     } catch {
-      toast('That file is not a Games Practice export');
+      toast(t.badImport);
     }
   };
   return (
     <section className="card data-tools">
       <div>
-        <h3 className="chart-title">Your data</h3>
-        <p className="chart-sub">Everything is stored in this browser. Export a backup or move it to another device.</p>
+        <h3 className="chart-title">{t.yourData}</h3>
+        <p className="chart-sub">{t.yourDataDesc}</p>
       </div>
       <div className="data-tools-actions">
         <button className="btn btn-secondary btn-sm" onClick={exportData}>
-          Export
+          {t.export}
         </button>
         <button className="btn btn-secondary btn-sm" onClick={() => file.current?.click()}>
-          Import
+          {t.import}
         </button>
         <input
           ref={file}

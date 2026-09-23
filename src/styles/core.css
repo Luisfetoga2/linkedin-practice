@@ -743,3 +743,22 @@
     color: #000;
   }
 }
+
+/* "English only for now" note for games without content in the interface language. */
+.lp-intro-note {
+  margin: -8px 0 14px;
+  padding: 4px 12px;
+  border-radius: var(--pill);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lp-lang-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: center;
+}

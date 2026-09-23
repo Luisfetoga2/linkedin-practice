@@ -6,9 +6,12 @@ import { dayKey, formatTime } from '../lib/time';
 import { Check, Flame } from '../core/components/Icons';
 import { SiteFooter, SiteHeader } from './SiteHeader';
 import { ActivityHeatmap } from './Activity';
+import { pick } from '../lib/i18n';
+import { useCore } from '../i18n/core';
 
 export function Home() {
   const histories = useAllHistories(gameIds);
+  const { t, lang } = useCore();
   const winDays = useMemo(() => winDaysFrom(histories), [histories]);
   const streak = dayStreak(winDays.keys());
   const today = dayKey();
@@ -22,8 +25,8 @@ export function Home() {
         <div className="home-grid">
           <section className="card home-list" aria-labelledby="home-title">
             <div className="home-list-head">
-              <h2 id="home-title">Practice your daily games</h2>
-              <p>Endless rounds with hints, timers, streaks and stats. No sign-in needed.</p>
+              <h2 id="home-title">{t.homeTitle}</h2>
+              <p>{t.homeSubtitle}</p>
             </div>
             <ul className="home-rows">
               {games.map(({ meta }) => {
@@ -33,11 +36,11 @@ export function Home() {
                   <li key={meta.id}>
                     <a className="home-row" href={href(meta.id)} style={{ '--game-tint': meta.tint, '--game-color': meta.color } as React.CSSProperties}>
                       <div className="home-row-text">
-                        <span className="home-row-tag">{meta.tagline}</span>
-                        <span className="home-row-name">{meta.name}</span>
+                        <span className="home-row-tag">{pick(meta.tagline, lang)}</span>
+                        <span className="home-row-name">{pick(meta.name, lang)}</span>
                         <span className="home-row-meta">
                           {s.played === 0 ? (
-                            'Not played yet'
+                            t.notPlayed
                           ) : (
                             <>
                               {s.streak.current > 0 && (
@@ -45,9 +48,9 @@ export function Home() {
                                   <Flame size={14} /> {s.streak.current}
                                 </span>
                               )}
-                              {meta.scoring === 'time' && s.bestMs !== null && <span>Best {formatTime(s.bestMs)}</span>}
-                              {meta.scoring === 'guesses' && <span>{Math.round(s.winRate * 100)}% won</span>}
-                              <span>{s.wins} solved</span>
+                              {meta.scoring === 'time' && s.bestMs !== null && <span>{t.bestTime(formatTime(s.bestMs))}</span>}
+                              {meta.scoring === 'guesses' && <span>{t.wonPct(Math.round(s.winRate * 100))}</span>}
+                              <span>{t.solvedCount(s.wins)}</span>
                             </>
                           )}
                         </span>
@@ -55,7 +58,7 @@ export function Home() {
                       <div className="home-row-tile">
                         <meta.Icon size={52} />
                         {doneToday && (
-                          <span className="home-row-done" title="Solved today">
+                          <span className="home-row-done" title={t.solvedToday}>
                             <Check size={14} strokeWidth={3} />
                           </span>
                         )}
@@ -69,35 +72,33 @@ export function Home() {
 
           <aside className="home-side">
             <section className="card side-card">
-              <h3 className="side-title">Your practice</h3>
+              <h3 className="side-title">{t.yourPractice}</h3>
               <div className="side-streak">
                 <span className={`side-flame${streak.today ? ' is-lit' : ''}`}>
                   <Flame size={30} />
                 </span>
                 <div>
-                  <div className="side-streak-value">
-                    {streak.current} day{streak.current === 1 ? '' : 's'}
-                  </div>
-                  <div className="side-streak-label">{streak.today ? 'Streak extended today' : streak.current > 0 ? 'Solve a puzzle to keep it going' : 'Solve any puzzle to start a streak'}</div>
+                  <div className="side-streak-value">{t.days(streak.current)}</div>
+                  <div className="side-streak-label">{streak.today ? t.streakToday : streak.current > 0 ? t.streakKeep : t.streakStart}</div>
                 </div>
               </div>
               <div className="side-kpis">
                 <div>
                   <strong>{solvedToday}</strong>
-                  <span>Today</span>
+                  <span>{t.today}</span>
                 </div>
                 <div>
                   <strong>{totalSolved}</strong>
-                  <span>All time</span>
+                  <span>{t.allTime}</span>
                 </div>
                 <div>
                   <strong>{streak.max}</strong>
-                  <span>Best streak</span>
+                  <span>{t.bestStreak}</span>
                 </div>
               </div>
               <ActivityHeatmap days={winDays} weeks={16} />
               <a className="btn btn-secondary btn-block" href={href('stats')}>
-                See all stats
+                {t.seeAllStats}
               </a>
             </section>
             <SiteFooter />

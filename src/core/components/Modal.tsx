@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Close } from './Icons';
+import { useCore } from '../../i18n/core';
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: Props) {
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
+  const { t } = useCore();
   closeRef.current = onClose;
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: Props) {
           ) : (
             <span />
           )}
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={onClose} aria-label={t.close}>
             <Close size={22} />
           </button>
         </div>

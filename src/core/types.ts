@@ -1,27 +1,33 @@
 import type { ComponentType, ReactNode } from 'react';
+import type { Lang, Localized } from '../lib/i18n';
 
 export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle' | 'nonogram';
 
 /** A selectable puzzle variant shown on the intro screen (size, difficulty, word length...). */
 export interface GameOption {
   id: string;
-  label: string;
-  choices: { value: string; label: string }[];
+  label: Localized<string>;
+  choices: { value: string; label: Localized<string> }[];
   default: string;
+  /**
+   * The default tracks the interface language (e.g. Wordle's word list) and isn't remembered
+   * between rounds; picking a value on the intro still overrides it for that session.
+   */
+  followsLanguage?: boolean;
 }
 
 /** Boolean toggle rendered in the game's settings sheet; read it with useGameSetting(). */
 export interface GameSettingDef {
   key: string;
-  label: string;
-  description?: string;
+  label: Localized<string>;
+  description?: Localized<string>;
   default: boolean;
 }
 
 export interface GameMeta {
   id: GameId;
-  name: string;
-  tagline: string;
+  name: Localized<string>;
+  tagline: Localized<string>;
   /** Brand color: intro background, accents. */
   color: string;
   /** Second stop of the intro gradient. */
@@ -33,7 +39,12 @@ export interface GameMeta {
   maxGuesses?: number;
   /** False for games without hints (Pinpoint): hides hint badges in results. Defaults to true. */
   hasHints?: boolean;
-  howToPlay: ReactNode;
+  howToPlay: Localized<ReactNode>;
+  /**
+   * Languages the puzzle content exists in. Omit for language-neutral games. When the interface
+   * language isn't listed, the shell shows an "English only for now" note.
+   */
+  contentLanguages?: Lang[];
   options?: GameOption[];
   settings?: GameSettingDef[];
   Icon: ComponentType<{ size?: number }>;
@@ -51,6 +62,8 @@ export interface GameResult {
 
 export interface GameProps {
   seed: number;
+  /** Interface language; the game is remounted when it changes. */
+  lang: Lang;
   /** Selected option values keyed by GameOption.id (always filled with defaults). */
   options: Record<string, string>;
   /** Shell has paused the clock; the board is covered and input should be ignored. */
