@@ -15,7 +15,7 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'patches',
   name: 'Patches',
-  tagline: 'Piece it together',
+  tagline: { en: 'Piece it together', es: 'Arma el rompecabezas' },
   color: '#f54545',
   colorEnd: '#d93333',
   tint: '#fddada',
@@ -24,22 +24,37 @@ export const meta: GameMeta = {
   options: [
     {
       id: 'size',
-      label: 'Size',
+      label: { en: 'Size', es: 'Tamaño' },
       default: '6',
       choices: ['5', '6', '7', '8'].map((v) => ({ value: v, label: `${v}×${v}` })),
     },
   ],
-  howToPlay: (
-    <>
-      <p>Cover the whole grid with rectangular patches.</p>
-      <ul>
-        <li>Each patch must contain exactly one clue.</li>
-        <li>A number tells you how many cells the patch covers.</li>
-        <li>A shape tells you whether the patch is a square, wide (wider than tall) or tall (taller than wide). A dashed shape can be any rectangle.</li>
-        <li>Drag across cells to draw a patch — every cell you pass through becomes part of it. Patches are never a single cell.</li>
-        <li>Press on a patch and drag to resize it; it stretches to the cell under your finger and shrinks back as you return.</li>
-        <li>Tap (or right-click) a patch to remove it. Release off the board or press Esc to cancel a drag.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Cover the whole grid with rectangular patches.</p>
+        <ul>
+          <li>Each patch must contain exactly one clue.</li>
+          <li>A number tells you how many cells the patch covers.</li>
+          <li>A shape tells you whether the patch is a square, wide (wider than tall) or tall (taller than wide). A dashed shape can be any rectangle.</li>
+          <li>Drag across cells to draw a patch — every cell you pass through becomes part of it. Patches are never a single cell.</li>
+          <li>Press on a patch and drag to resize it; it stretches to the cell under your finger and shrinks back as you return.</li>
+          <li>Tap (or right-click) a patch to remove it. Release off the board or press Esc to cancel a drag.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Cubre toda la cuadrícula con parches rectangulares.</p>
+        <ul>
+          <li>Cada parche debe contener exactamente una pista.</li>
+          <li>Un número indica cuántas casillas cubre el parche.</li>
+          <li>Una figura indica si el parche es cuadrado, ancho (más ancho que alto) o alto (más alto que ancho). Una figura punteada puede ser cualquier rectángulo.</li>
+          <li>Arrastra sobre las casillas para dibujar un parche: cada casilla por la que pases forma parte de él. Un parche nunca es de una sola casilla.</li>
+          <li>Mantén presionado un parche y arrastra para cambiar su tamaño; se estira hasta la casilla bajo tu dedo y se encoge al regresar.</li>
+          <li>Toca un parche (o haz clic derecho sobre él) para quitarlo. Suelta fuera del tablero o presiona Esc para cancelar un arrastre.</li>
+        </ul>
+      </>
+    ),
+  },
 };

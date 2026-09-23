@@ -12,6 +12,8 @@ export interface NonogramPuzzle {
   cols: number[][];
   /** Name of the hand-drawn picture ("cat"), when the puzzle came from the library. */
   name?: string;
+  /** Spanish name with its article ("un gato"), alongside `name`. */
+  nameEs?: string;
 }
 
 /** Run lengths of filled cells; an empty line has no runs (shown as "0"). */
@@ -230,7 +232,7 @@ export function generateNonogram(n: number, seed: number, pictures?: readonly Pi
     const pic = rng.pick(usable);
     let solution = pictureGrid(pic, rng.chance(0.5));
     if (!isLineSolvable(solution, n)) solution = pictureGrid(pic, false);
-    return { size: n, solution, ...cluesFor(solution, n), name: pic.name };
+    return { size: n, solution, ...cluesFor(solution, n), name: pic.name, nameEs: pic.es };
   }
   return randomNonogram(n, seed);
 }
@@ -260,38 +262,36 @@ function randomNonogram(n: number, seed: number): NonogramPuzzle {
   throw new Error('nonogram generation failed');
 }
 
+/**
+ * A hint is structured data; the component words it in the interface language.
+ * - mistake, value 0: a filled square that should be empty; value 1: a crossed square that should be filled.
+ * - deduce: `line` (with its `clue`) forces `cell` to `value`.
+ * - reveal: `cell` is filled (fallback when no single line deduces anything).
+ */
 export interface NonogramHint {
   kind: 'mistake' | 'deduce' | 'reveal';
   cell: number;
   value: 0 | 1;
-  line?: { kind: 'row' | 'col'; index: number };
-  message: string;
+  line?: { kind: 'row' | 'col'; index: number; clue: number[] };
 }
 
 /** Board states: 0 empty, 1 filled, 2 crossed. */
 export function hintFor(p: NonogramPuzzle, board: ArrayLike<number>): NonogramHint | null {
   const n = p.size;
   for (let i = 0; i < n * n; i++) {
-    if (board[i] === 1 && !p.solution[i]) return { kind: 'mistake', cell: i, value: 0, message: 'This square shouldn’t be filled.' };
-    if (board[i] === 2 && p.solution[i]) return { kind: 'mistake', cell: i, value: 1, message: 'This square should be filled, not crossed out.' };
+    if (board[i] === 1 && !p.solution[i]) return { kind: 'mistake', cell: i, value: 0 };
+    if (board[i] === 2 && p.solution[i]) return { kind: 'mistake', cell: i, value: 1 };
   }
   const known: Known[] = Array.from(board, (v) => (v === 1 ? 1 : v === 2 ? 0 : -1)) as Known[];
   const step = nextLineStep(p, known);
   if (step) {
     const pick = step.cells.find((c) => c.value === 1) ?? step.cells[0];
     const clue = (step.kind === 'row' ? p.rows : p.cols)[step.index];
-    const name = `${step.kind === 'row' ? 'Row' : 'Column'} ${step.index + 1}`;
-    return {
-      kind: 'deduce',
-      cell: pick.cell,
-      value: pick.value,
-      line: { kind: step.kind, index: step.index },
-      message: `${name} (${clue.join(' ') || '0'}) ${pick.value === 1 ? 'must fill' : 'can’t use'} this square${pick.value === 1 ? '' : ', so it gets an ✕'}.`,
-    };
+    return { kind: 'deduce', cell: pick.cell, value: pick.value, line: { kind: step.kind, index: step.index, clue } };
   }
   const missing = Array.from({ length: n * n }, (_, i) => i).find((i) => p.solution[i] && board[i] !== 1);
   if (missing === undefined) return null;
-  return { kind: 'reveal', cell: missing, value: 1, message: 'This square is filled.' };
+  return { kind: 'reveal', cell: missing, value: 1 };
 }
 
 export function isSolved(p: NonogramPuzzle, board: ArrayLike<number>): boolean {

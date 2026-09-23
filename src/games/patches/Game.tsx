@@ -4,16 +4,11 @@ import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
-import { fitsClue, generatePatches, logicSolve, rectContains, rectsOverlap, sameRect, type Clue, type Rect, type Reason } from './generator';
+import { fitsClue, generatePatches, logicSolve, rectContains, rectsOverlap, sameRect, type Clue, type Rect } from './generator';
 import { patchAt, resolveNew, resolveResize, type DrawOutcome, type Patches } from './draw';
+import { STR } from './i18n';
 import styles from './Game.module.css';
 
-
-const REASON_TEXT: Record<Reason, string> = {
-  only: 'This clue only fits in one place.',
-  claimed: 'The patches around it already claim the other cells it could use, so this clue only fits in one place.',
-  reach: 'Some cells here can only be reached by this clue, which leaves just one patch that works.',
-};
 
 function normRect(a: number, b: number, n: number): Rect {
   const ar = Math.floor(a / n);
@@ -40,7 +35,8 @@ function rectStyle(r: Rect, n: number): CSSProperties {
   };
 }
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const n = Math.min(8, Math.max(5, parseInt(options.size, 10) || 6));
   const puzzle = useMemo(() => generatePatches(n, seed), [n, seed]);
   const { clues, solution } = puzzle;
@@ -235,7 +231,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
       const rect = d.resize ? extendTo(d.resize.base, d.cur) : d.box;
       setShake(rect);
       later(() => setShake(null), 450);
-      toast(out.kind === 'none' ? 'A patch needs exactly one clue' : 'A patch can only hold one clue');
+      toast(out.kind === 'none' ? t.needsOneClue : t.onlyOneClue);
       return;
     }
     if (d.resize && sameRect(out.rect, d.resize.base)) return; // dragged back inside: no change
@@ -290,7 +286,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     if (wrong >= 0) {
       setFlash(wrong);
       later(() => setFlash((f) => (f === wrong ? null : f)), 2400);
-      setHint({ text: 'This patch isn’t right. Try removing it and drawing it again.' });
+      setHint({ text: t.wrongPatch });
       return;
     }
     const res = logicSolve(n, clues, cur);
@@ -303,7 +299,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     place(solution[pick.clue], pick.clue);
     setFlash(pick.clue);
     later(() => setFlash((f) => (f === pick.clue ? null : f)), 1600);
-    setHint({ text: REASON_TEXT[pick.reason] });
+    setHint({ text: t.reason[pick.reason] });
   };
 
   const tint = (color: string): CSSProperties => ({ ['--pc' as string]: color }) as CSSProperties;
@@ -323,7 +319,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         onPointerCancel={onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
         role="application"
-        aria-label={`Patches board, ${n} by ${n}. ${patches.filter(Boolean).length} of ${clues.length} patches placed.`}
+        aria-label={t.boardLabel(n, patches.filter(Boolean).length, clues.length)}
       >
         <div className={styles.grid}>{cells}</div>
         <div className={styles.layer}>
@@ -357,15 +353,15 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
           {clues.map((k, i) => (
-            <ClueBadge key={i} clue={k} n={n} />
+            <ClueBadge key={i} clue={k} n={n} label={t.clueLabel(k.size ?? null, k.shape)} />
           ))}
         </div>
       </div>
       {hint && <HintBubble onDismiss={() => setHint(null)}>{hint.text}</HintBubble>}
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={locked || history.length === 0} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={locked} />
-        <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={locked || patches.every((p) => !p)} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || history.length === 0} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={locked} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || patches.every((p) => !p)} />
       </ControlBar>
     </div>
   );
@@ -393,12 +389,10 @@ function CellCount({ rect, clue }: { rect: Rect; clue: Clue }) {
   );
 }
 
-function ClueBadge({ clue, n }: { clue: Clue; n: number }) {
+function ClueBadge({ clue, n, label }: { clue: Clue; n: number; label: string }) {
   const shapeCls = clue.shape === 'wide' ? styles.bWide : clue.shape === 'tall' ? styles.bTall : styles.bSquare;
-  const label =
-    `${clue.size != null ? `${clue.size} cells` : 'any size'}, ` + (clue.shape === 'any' ? 'any shape' : `${clue.shape} shape`);
   return (
-    <div className={styles.clueCell} style={rectStyle({ r0: clue.r, c0: clue.c, r1: clue.r, c1: clue.c }, n)} aria-label={`Clue: ${label}`}>
+    <div className={styles.clueCell} style={rectStyle({ r0: clue.r, c0: clue.c, r1: clue.r, c1: clue.c }, n)} aria-label={label}>
       <div className={`${styles.badge} ${shapeCls}${clue.shape === 'any' ? ` ${styles.bAny}` : ''}`} style={{ ['--pc' as string]: clue.color } as CSSProperties}>
         {clue.size != null ? (
           <span>{clue.size}</span>

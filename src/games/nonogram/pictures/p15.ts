@@ -4,6 +4,7 @@ import type { Picture } from './types';
 export const PICTURES_15: Picture[] = [
   {
     name: 'cat',
+    es: 'un gato',
     rows: [
       '.##.........##.',
       '.###.......###.',
@@ -24,6 +25,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'house',
+    es: 'una casa',
     rows: [
       '.......#.......',
       '......###.##...',
@@ -44,6 +46,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'tree',
+    es: 'un árbol',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -64,6 +67,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'fish',
+    es: 'un pez',
     rows: [
       '....####.......',
       '.....#####.....',
@@ -84,6 +88,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'heart',
+    es: 'un corazón',
     rows: [
       '...............',
       '..####...####..',
@@ -104,6 +109,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'rocket',
+    es: 'un cohete',
     rows: [
       '.......#.......',
       '......###......',
@@ -124,6 +130,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'mushroom',
+    es: 'un hongo',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -144,6 +151,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'umbrella',
+    es: 'un paraguas',
     rows: [
       '.......#.......',
       '....#######....',
@@ -164,6 +172,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'anchor',
+    es: 'un ancla',
     rows: [
       '.....#####.....',
       '.....##.##.....',
@@ -184,6 +193,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'key',
+    es: 'una llave',
     rows: [
       '...#########...',
       '..###########..',
@@ -204,6 +214,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'sailboat',
+    es: 'un velero',
     rows: [
       '.......#.......',
       '.......##......',
@@ -224,6 +235,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'coffee cup',
+    es: 'una taza de café',
     rows: [
       '....#..#..#....',
       '.....#..#..#...',
@@ -244,6 +256,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'star',
+    es: 'una estrella',
     rows: [
       '.......#.......',
       '.......#.......',
@@ -264,6 +277,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'bell',
+    es: 'una campana',
     rows: [
       '.......#.......',
       '......###......',
@@ -284,6 +298,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'duck',
+    es: 'un pato',
     rows: [
       '....####.......',
       '...######......',
@@ -304,6 +319,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'apple',
+    es: 'una manzana',
     rows: [
       '.......##......',
       '......##..###..',
@@ -324,6 +340,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'cherries',
+    es: 'unas cerezas',
     rows: [
       '........##.....',
       '.......##.#....',
@@ -344,6 +361,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'butterfly',
+    es: 'una mariposa',
     rows: [
       '..##.......##..',
       '....#.....#....',
@@ -364,6 +382,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'owl',
+    es: 'un búho',
     rows: [
       '..#.........#..',
       '..##.......##..',
@@ -384,6 +403,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'turtle',
+    es: 'una tortuga',
     rows: [
       '......###......',
       '......###......',
@@ -404,6 +424,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'snail',
+    es: 'un caracol',
     rows: [
       '...#.#.........',
       '...#.#..#####..',
@@ -424,6 +445,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'car',
+    es: 'un auto',
     rows: [
       '...............',
       '...########....',
@@ -444,6 +466,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'airplane',
+    es: 'un avión',
     rows: [
       '.......#.......',
       '......###......',
@@ -464,6 +487,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'sun',
+    es: 'un sol',
     rows: [
       '.......#.......',
       '..#....#....#..',
@@ -484,6 +508,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'moon',
+    es: 'una luna',
     rows: [
       '.....#####.....',
       '...####........',
@@ -504,6 +529,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'rain cloud',
+    es: 'una nube de lluvia',
     rows: [
       '....####.......',
       '...######.###..',
@@ -524,6 +550,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'leaf',
+    es: 'una hoja',
     rows: [
       '..........#####',
       '........#######',
@@ -544,6 +571,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'flower',
+    es: 'una flor',
     rows: [
       '.....##.##.....',
       '....###.###....',
@@ -564,6 +592,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'cactus',
+    es: 'un cactus',
     rows: [
       '......###......',
       '.....#####.....',
@@ -584,6 +613,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'palm tree',
+    es: 'una palmera',
     rows: [
       '..####...####..',
       '.######.######.',
@@ -604,6 +634,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'mountain',
+    es: 'una montaña',
     rows: [
       '.......#.......',
       '......###......',
@@ -624,6 +655,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'rabbit',
+    es: 'un conejo',
     rows: [
       '...##.....##...',
       '..####...####..',
@@ -644,6 +676,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'elephant',
+    es: 'un elefante',
     rows: [
       '......########.',
       '..####.#######.',
@@ -664,6 +697,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'pig',
+    es: 'un cerdo',
     rows: [
       '..##.......##..',
       '..###.....###..',
@@ -684,6 +718,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'whale',
+    es: 'una ballena',
     rows: [
       '...........#.#.',
       '............#..',
@@ -704,6 +739,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'crab',
+    es: 'un cangrejo',
     rows: [
       '.##.........##.',
       '##...........##',
@@ -724,6 +760,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'octopus',
+    es: 'un pulpo',
     rows: [
       '....#######....',
       '...#########...',
@@ -744,6 +781,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'bee',
+    es: 'una abeja',
     rows: [
       '...###...###...',
       '...#..#.#..#...',
@@ -764,6 +802,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'frog',
+    es: 'una rana',
     rows: [
       '..###.....###..',
       '.##.##...##.##.',
@@ -784,6 +823,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'mouse',
+    es: 'un ratón',
     rows: [
       '.####.....####.',
       '######...######',
@@ -804,6 +844,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'dog',
+    es: 'un perro',
     rows: [
       '...##..........',
       '..####.........',
@@ -824,6 +865,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'penguin',
+    es: 'un pingüino',
     rows: [
       '.....#####.....',
       '....#######....',
@@ -844,6 +886,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'truck',
+    es: 'un camión',
     rows: [
       '##########.....',
       '##########.....',
@@ -864,6 +907,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'train',
+    es: 'un tren',
     rows: [
       '.####..........',
       '..###....######',
@@ -884,6 +928,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'helicopter',
+    es: 'un helicóptero',
     rows: [
       '###############',
       '.......#.......',
@@ -904,6 +949,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'ice cream',
+    es: 'un helado',
     rows: [
       '.......#.......',
       '.....#####.....',
@@ -924,6 +970,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'cake',
+    es: 'un pastel',
     rows: [
       '...#...#...#...',
       '...#...#...#...',
@@ -944,6 +991,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'pizza',
+    es: 'una pizza',
     rows: [
       '###############',
       '###############',
@@ -964,6 +1012,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'strawberry',
+    es: 'una fresa',
     rows: [
       '.....#.#.#.....',
       '......###......',
@@ -984,6 +1033,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'pear',
+    es: 'una pera',
     rows: [
       '........##.....',
       '.......##......',
@@ -1004,6 +1054,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'burger',
+    es: 'una hamburguesa',
     rows: [
       '....#######....',
       '..###########..',
@@ -1024,6 +1075,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'lollipop',
+    es: 'una paleta',
     rows: [
       '....#######....',
       '..###.....###..',
@@ -1044,6 +1096,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'grapes',
+    es: 'unas uvas',
     rows: [
       '.........#.....',
       '........#.####.',
@@ -1064,6 +1117,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'ship',
+    es: 'un barco',
     rows: [
       '.....##...##...',
       '....###..###...',
@@ -1084,6 +1138,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'pineapple',
+    es: 'una piña',
     rows: [
       '..###..#..###..',
       '...##.###.##...',
@@ -1104,6 +1159,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'lighthouse',
+    es: 'un faro',
     rows: [
       '......###......',
       '.....#####.....',
@@ -1124,6 +1180,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'windmill',
+    es: 'un molino de viento',
     rows: [
       '.##.........##.',
       '.###.......###.',
@@ -1144,6 +1201,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'tent',
+    es: 'una tienda de campaña',
     rows: [
       '.......#.......',
       '......###......',
@@ -1164,6 +1222,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'church',
+    es: 'una iglesia',
     rows: [
       '.......#.......',
       '......###......',
@@ -1184,6 +1243,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'guitar',
+    es: 'una guitarra',
     rows: [
       '.....#####.....',
       '......###......',
@@ -1204,6 +1264,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'lamp',
+    es: 'una lámpara',
     rows: [
       '....#######....',
       '....#######....',
@@ -1224,6 +1285,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'alarm clock',
+    es: 'un despertador',
     rows: [
       '..##.......##..',
       '.###.#####.###.',
@@ -1244,6 +1306,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'crown',
+    es: 'una corona',
     rows: [
       '#......#......#',
       '#......#......#',
@@ -1264,6 +1327,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'teapot',
+    es: 'una tetera',
     rows: [
       '......###......',
       '.......#.......',
@@ -1284,6 +1348,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'lightbulb',
+    es: 'un foco',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -1304,6 +1369,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'camera',
+    es: 'una cámara',
     rows: [
       '....####.......',
       '...######..###.',
@@ -1324,6 +1390,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'trophy',
+    es: 'un trofeo',
     rows: [
       '.#############.',
       '##.#########.##',
@@ -1344,6 +1411,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 't-shirt',
+    es: 'una camiseta',
     rows: [
       '...###...###...',
       '..#####.#####..',
@@ -1364,6 +1432,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'boot',
+    es: 'una bota',
     rows: [
       '..########.....',
       '..########.....',
@@ -1384,6 +1453,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'candle',
+    es: 'una vela',
     rows: [
       '.......#.......',
       '......###......',
@@ -1404,6 +1474,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'balloon',
+    es: 'un globo',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -1424,6 +1495,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'gift',
+    es: 'un regalo',
     rows: [
       '..###.....###..',
       '.#####...#####.',
@@ -1444,6 +1516,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'padlock',
+    es: 'un candado',
     rows: [
       '.....#####.....',
       '....#######....',
@@ -1464,6 +1537,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'smiley',
+    es: 'una carita feliz',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -1484,6 +1558,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'ghost',
+    es: 'un fantasma',
     rows: [
       '.....#####.....',
       '...#########...',
@@ -1504,6 +1579,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'music note',
+    es: 'una nota musical',
     rows: [
       '....##########.',
       '....##########.',
@@ -1524,6 +1600,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'snake',
+    es: 'una serpiente',
     rows: [
       '.........####..',
       '........##.####',
@@ -1544,6 +1621,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 't-rex',
+    es: 'un tiranosaurio',
     rows: [
       '........######.',
       '.......##.#####',
@@ -1564,6 +1642,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'bird',
+    es: 'un pájaro',
     rows: [
       '..####.........',
       '.######........',
@@ -1584,6 +1663,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'lightning',
+    es: 'un rayo',
     rows: [
       '.......#######.',
       '......#######..',
@@ -1604,6 +1684,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'castle',
+    es: 'un castillo',
     rows: [
       '#.#.#.....#.#.#',
       '#####.....#####',
@@ -1624,6 +1705,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'giraffe',
+    es: 'una jirafa',
     rows: [
       '...........#.#.',
       '...........####',
@@ -1644,6 +1726,7 @@ export const PICTURES_15: Picture[] = [
   },
   {
     name: 'ladybug',
+    es: 'una mariquita',
     rows: [
       '...#.......#...',
       '....##...##....',

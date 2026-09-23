@@ -20,7 +20,7 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'nonogram',
   name: 'Nonogram',
-  tagline: 'Paint by numbers',
+  tagline: { en: 'Paint by numbers', es: 'Pinta con números' },
   color: '#c2296f',
   colorEnd: '#a11d5b',
   tint: '#fde3ef',
@@ -29,7 +29,7 @@ export const meta: GameMeta = {
   options: [
     {
       id: 'size',
-      label: 'Size',
+      label: { en: 'Size', es: 'Tamaño' },
       default: '10',
       choices: [
         { value: '5', label: '5×5' },
@@ -39,18 +39,47 @@ export const meta: GameMeta = {
     },
   ],
   settings: [
-    { key: 'autoCross', label: 'Auto-cross finished lines', description: 'Fill the rest of a row or column with ✕ once it matches its clue.', default: false },
-    { key: 'showMistakes', label: 'Show mistakes', description: 'Mark filled squares that aren’t part of the picture.', default: false },
+    {
+      key: 'autoCross',
+      label: { en: 'Auto-cross finished lines', es: 'Marcar líneas terminadas' },
+      description: {
+        en: 'Fill the rest of a row or column with ✕ once it matches its clue.',
+        es: 'Llena con ✕ el resto de una fila o columna en cuanto coincide con su pista.',
+      },
+      default: false,
+    },
+    {
+      key: 'showMistakes',
+      label: { en: 'Show mistakes', es: 'Mostrar errores' },
+      description: {
+        en: 'Mark filled squares that aren’t part of the picture.',
+        es: 'Señala las casillas rellenas que no forman parte del dibujo.',
+      },
+      default: false,
+    },
   ],
-  howToPlay: (
-    <>
-      <p>Fill squares to reveal a hidden picture.</p>
-      <ul>
-        <li>The numbers beside each row and above each column are the lengths of its runs of filled squares, in order.</li>
-        <li>Runs are separated by at least one empty square.</li>
-        <li>Tap or drag to fill. Switch to ✕ (or right-click) to mark squares you know are empty. Drag stays in a straight line.</li>
-        <li>A clue turns gray once its line matches. Every puzzle can be solved by logic alone.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Fill squares to reveal a hidden picture.</p>
+        <ul>
+          <li>The numbers beside each row and above each column are the lengths of its runs of filled squares, in order.</li>
+          <li>Runs are separated by at least one empty square.</li>
+          <li>Tap or drag to fill. Switch to ✕ (or right-click) to mark squares you know are empty. Drag stays in a straight line.</li>
+          <li>A clue turns gray once its line matches. Every puzzle can be solved by logic alone.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Rellena casillas para descubrir un dibujo oculto.</p>
+        <ul>
+          <li>Los números junto a cada fila y sobre cada columna son, en orden, las longitudes de sus grupos de casillas rellenas.</li>
+          <li>Entre un grupo y otro hay al menos una casilla vacía.</li>
+          <li>Toca o arrastra para rellenar. Cambia a ✕ (o haz clic derecho) para marcar las casillas que sabes que están vacías. El arrastre sigue una línea recta.</li>
+          <li>Una pista se pone gris cuando su línea coincide. Todos los acertijos se pueden resolver solo con lógica.</li>
+        </ul>
+      </>
+    ),
+  },
 };

@@ -5,6 +5,7 @@ import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { useGameSetting } from '../../lib/settings';
 import { colOf, generateNonogram, hintFor, isSolved, rowOf, runsOf, sameRuns, type NonogramHint } from './logic';
 import { PICTURES } from './pictures';
+import { STR, hintMessage, pictureName } from './i18n';
 import styles from './Game.module.css';
 
 const EMPTY = 0;
@@ -44,8 +45,6 @@ function paintSegment(before: Board, n: number, d: Drag, cell: number): Board {
   return out;
 }
 
-const article = (name: string) => (/^[aeiou]/i.test(name) ? 'an' : 'a');
-
 /** Cross out the leftover squares of every line whose filled runs already match its clue. */
 function autoCrossLines(board: Board, n: number, rows: number[][], cols: number[][]): Board {
   let out: Board | null = null;
@@ -63,9 +62,11 @@ function autoCrossLines(board: Board, n: number, rows: number[][], cols: number[
   return out ?? board;
 }
 
-export default function Game({ seed, options, paused, onReady, onHint, onComplete }: GameProps) {
+export default function Game({ seed, lang, options, paused, onReady, onHint, onComplete }: GameProps) {
+  const t = STR[lang];
   const n = [5, 10, 15].includes(Number(options.size)) ? Number(options.size) : 10;
   const puzzle = useMemo(() => generateNonogram(n, seed, PICTURES[n]), [n, seed]);
+  const picName = useMemo(() => pictureName(puzzle, lang), [puzzle, lang]);
   const [autoCross] = useGameSetting<boolean>('nonogram', 'autoCross', false);
   const [showMistakes] = useGameSetting<boolean>('nonogram', 'showMistakes', false);
 
@@ -129,13 +130,15 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
     cb.current.onComplete({
       won: true,
       share: `🖼️ Nonogram ${n}×${n}`,
-      summary: puzzle.name ? (
+      summary: picName ? (
         <>
-          It was {article(puzzle.name)} <strong>{puzzle.name}</strong>!
+          {t.itWas.pre}
+          {picName.article} <strong>{picName.noun}</strong>
+          {t.itWas.post}
         </>
       ) : undefined,
     });
-  }, [board, puzzle, n, won]);
+  }, [board, puzzle, n, won, picName, t]);
 
   const commit = (before: Board, after: Board) => {
     const final = autoCross ? autoCrossLines(after, n, puzzle.rows, puzzle.cols) : after;
@@ -333,7 +336,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
           onContextMenu={(e) => e.preventDefault()}
           onPointerLeave={() => !drag.current && setFocus(null)}
           role="grid"
-          aria-label={`Nonogram ${n} by ${n}`}
+          aria-label={t.gridLabel(n)}
         >
           {Array.from(board, (v, i) => {
             const r = Math.floor(i / n);
@@ -351,7 +354,7 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
               <div
                 key={i}
                 role="gridcell"
-                aria-label={`Row ${r + 1}, column ${c + 1}: ${v === FILL ? 'filled' : v === CROSS ? 'crossed out' : 'empty'}`}
+                aria-label={t.cellLabel(r + 1, c + 1, v === FILL ? 'filled' : v === CROSS ? 'crossed' : 'empty')}
                 className={cls}
                 style={{ '--d': `${(r + c) * 22}ms` } as CSSProperties}
               >
@@ -374,27 +377,29 @@ export default function Game({ seed, options, paused, onReady, onHint, onComplet
         </div>
       </div>
 
-      {won && puzzle.name && (
+      {won && picName && (
         <p className={styles.reveal}>
-          It’s {article(puzzle.name)} <strong>{puzzle.name}</strong>!
+          {t.itIs.pre}
+          {picName.article} <strong>{picName.noun}</strong>
+          {t.itIs.post}
         </p>
       )}
-      {hint && !won && <HintBubble onDismiss={() => setHint(null)}>{hint.message}</HintBubble>}
+      {hint && !won && <HintBubble onDismiss={() => setHint(null)}>{hintMessage(t, hint)}</HintBubble>}
 
       <ControlBar>
-        <div className={styles.modes} role="radiogroup" aria-label="Tap mode">
+        <div className={styles.modes} role="radiogroup" aria-label={t.tapMode}>
           <button type="button" role="radio" aria-checked={mode === FILL} className={mode === FILL ? styles.modeOn : ''} onClick={() => setMode(FILL)} disabled={locked}>
-            <span className={styles.modeFill} /> Fill
+            <span className={styles.modeFill} /> {t.fill}
           </button>
           <button type="button" role="radio" aria-checked={mode === CROSS} className={mode === CROSS ? styles.modeOn : ''} onClick={() => setMode(CROSS)} disabled={locked}>
-            <span className={styles.modeCross}>✕</span> Cross
+            <span className={styles.modeCross}>✕</span> {t.cross}
           </button>
         </div>
       </ControlBar>
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={locked || history.length === 0} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={locked} />
-        <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={locked || board.every((v) => v === EMPTY)} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || history.length === 0} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={locked} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || board.every((v) => v === EMPTY)} />
       </ControlBar>
     </div>
   );

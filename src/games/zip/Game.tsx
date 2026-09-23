@@ -6,6 +6,7 @@ import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
 import { DOWN, LEFT, RIGHT, UP, buildAdjacency, generateZip, step, type ZipPuzzle } from './generator';
 import { EMPTY_LINE, lineFor, lineGeometry, sameLine, stepLine, tipTarget, type LineState } from './lineAnim';
+import { STR } from './i18n';
 import styles from './Game.module.css';
 
 const U = 100; // SVG units per cell
@@ -58,7 +59,7 @@ export default function Game(props: GameProps) {
   if (!puzzle) {
     return (
       <div className={styles.wrap}>
-        <div className={`${styles.board} ${styles.loading}`}>Generating…</div>
+        <div className={`${styles.board} ${styles.loading}`}>{STR[props.lang].generating}</div>
       </div>
     );
   }
@@ -72,7 +73,8 @@ interface Hint {
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & { puzzle: ZipPuzzle }) {
+function ZipBoard({ puzzle, lang, paused, onReady, onHint, onComplete }: GameProps & { puzzle: ZipPuzzle }) {
+  const t = STR[lang];
   const { size, numbers, count, walls, solution, palette } = puzzle;
   const total = size * size;
   const adj = useMemo(() => buildAdjacency(size, walls), [size, walls]);
@@ -329,9 +331,9 @@ function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & {
       setHint(null);
       onComplete({ won: true, share: `〰️ Zip ${size}×${size}` });
     } else if (path.length > 0 && path.length < total && numbers[path[path.length - 1]] === count) {
-      toast('Fill every cell before reaching the last number');
+      toast(t.fillEveryCell);
     }
-  }, [path, total, size, numbers, count, onComplete]);
+  }, [path, total, size, numbers, count, onComplete, t]);
 
   // Once solved, drop any live drag tip so the line settles on the finished path.
   useEffect(() => {
@@ -366,9 +368,7 @@ function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & {
     setPath(next);
     onHint();
     setHint({
-      text: trimmed
-        ? 'Your path took a wrong turn, so it was trimmed back to the last correct cell. Here’s the next move.'
-        : 'Here’s the next move.',
+      text: trimmed ? t.hintTrimmed : t.hintNext,
     });
   };
 
@@ -510,7 +510,7 @@ function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & {
         onPointerCancel={endDrag}
         onLostPointerCapture={endDrag}
         role="application"
-        aria-label={`Zip board, ${size} by ${size}. Path covers ${path.length} of ${total} cells.`}
+        aria-label={t.boardLabel(size, path.length, total)}
       >
         <svg className={styles.svg} viewBox={`0 0 ${vb} ${vb}`} aria-hidden>
           <defs ref={defsRef} />
@@ -540,9 +540,9 @@ function ZipBoard({ puzzle, paused, onReady, onHint, onComplete }: GameProps & {
       </div>
       {hint && <HintBubble onDismiss={() => setHint(null)}>{hint.text}</HintBubble>}
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label="Undo" onClick={undo} disabled={locked || history.length === 0} />
-        <ControlButton icon={<Bulb size={18} />} label="Hint" onClick={giveHint} disabled={locked} />
-        <ControlButton icon={<Eraser size={18} />} label="Clear" onClick={clear} disabled={locked || path.length === 0} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || history.length === 0} />
+        <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={locked} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || path.length === 0} />
       </ControlBar>
     </div>
   );

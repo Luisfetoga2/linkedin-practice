@@ -16,7 +16,7 @@ function Icon({ size = 48 }: { size?: number }) {
 export const meta: GameMeta = {
   id: 'zip',
   name: 'Zip',
-  tagline: 'Complete the path',
+  tagline: { en: 'Complete the path', es: 'Completa el camino' },
   color: '#ee5b14',
   colorEnd: '#d24a0b',
   tint: '#ffdccd',
@@ -25,20 +25,33 @@ export const meta: GameMeta = {
   options: [
     {
       id: 'size',
-      label: 'Size',
+      label: { en: 'Size', es: 'Tamaño' },
       default: '7',
       choices: ['5', '6', '7', '8'].map((v) => ({ value: v, label: `${v}×${v}` })),
     },
   ],
-  howToPlay: (
-    <>
-      <p>Draw a single path that connects the numbers in order and fills every cell.</p>
-      <ul>
-        <li>Start at 1 and visit every number in ascending order, ending on the highest number.</li>
-        <li>The path must pass through every cell exactly once.</li>
-        <li>The path can’t cross thick walls.</li>
-        <li>Drag back over the path to erase part of it.</li>
-      </ul>
-    </>
-  ),
+  howToPlay: {
+    en: (
+      <>
+        <p>Draw a single path that connects the numbers in order and fills every cell.</p>
+        <ul>
+          <li>Start at 1 and visit every number in ascending order, ending on the highest number.</li>
+          <li>The path must pass through every cell exactly once.</li>
+          <li>The path can’t cross thick walls.</li>
+          <li>Drag back over the path to erase part of it.</li>
+        </ul>
+      </>
+    ),
+    es: (
+      <>
+        <p>Traza un solo camino que una los números en orden y llene todas las casillas.</p>
+        <ul>
+          <li>Empieza en el 1 y pasa por cada número en orden ascendente, hasta terminar en el más alto.</li>
+          <li>El camino debe pasar por cada casilla exactamente una vez.</li>
+          <li>El camino no puede cruzar las paredes gruesas.</li>
+          <li>Arrastra de regreso sobre el camino para borrar una parte.</li>
+        </ul>
+      </>
+    ),
+  },
 };
