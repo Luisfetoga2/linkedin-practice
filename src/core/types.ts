@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { Lang, Localized } from '../lib/i18n';
 
-export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle' | 'nonogram';
+export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle' | 'nonogram' | 'mini';
 
 /** A selectable puzzle variant shown on the intro screen (size, difficulty, word length...). */
 export interface GameOption {
