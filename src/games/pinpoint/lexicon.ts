@@ -40,38 +40,56 @@ export interface UmbrellaClass {
   vocab: Set<string>;
 }
 
-export const UMBRELLAS: readonly UmbrellaClass[] = SRC.split('\n')
-  .map((l) => l.trim())
-  .filter((l) => l.includes('|'))
-  .map((l) => {
-    const [aliases, vocab] = l.split('|');
-    return {
-      aliases: new Set(aliases.split(',').flatMap((a) => tokenize(a))),
-      vocab: new Set(vocab.split(',').flatMap((w) => tokenize(w))),
-    };
-  });
-
-/** Fraction of the member words that belong to the class a guess token names (0 if it names none). */
-export function umbrellaFraction(token: string, memberTokens: readonly (readonly string[])[]): number {
-  let best = 0;
-  for (const u of UMBRELLAS) {
-    if (!u.aliases.has(token)) continue;
-    const hits = memberTokens.filter((m) => m.some((t) => u.vocab.has(t))).length;
-    best = Math.max(best, memberTokens.length ? hits / memberTokens.length : 0);
-  }
-  return best;
+/** Umbrella-class evidence for the closeness recap, bound to one language's data. */
+export interface Lexicon {
+  umbrellaFraction(token: string, memberTokens: readonly (readonly string[])[]): number;
+  siblingFraction(token: string, memberTokens: readonly (readonly string[])[]): number;
 }
 
-/**
- * Sibling evidence: the guess token is itself an instance of a class ("sandwich" is food) that
- * most members also belong to. Returns that member fraction (0 when the token is in no shared class).
- */
-export function siblingFraction(token: string, memberTokens: readonly (readonly string[])[]): number {
-  let best = 0;
-  for (const u of UMBRELLAS) {
-    if (!u.vocab.has(token)) continue;
-    const hits = memberTokens.filter((m) => m.some((t) => u.vocab.has(t))).length;
-    best = Math.max(best, memberTokens.length ? hits / memberTokens.length : 0);
-  }
-  return best;
+/** Parse `aliases | vocabulary` lines with a language's tokenizer. */
+export function parseUmbrellas(src: string, tok: (s: string) => string[]): UmbrellaClass[] {
+  return src
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.includes('|'))
+    .map((l) => {
+      const [aliases, vocab] = l.split('|');
+      return {
+        aliases: new Set(aliases.split(',').flatMap((a) => tok(a))),
+        vocab: new Set(vocab.split(',').flatMap((w) => tok(w))),
+      };
+    });
 }
+
+export function makeLexicon(umbrellas: readonly UmbrellaClass[]): Lexicon {
+  return {
+    /** Fraction of the member words that belong to the class a guess token names (0 if it names none). */
+    umbrellaFraction(token, memberTokens) {
+      let best = 0;
+      for (const u of umbrellas) {
+        if (!u.aliases.has(token)) continue;
+        const hits = memberTokens.filter((m) => m.some((t) => u.vocab.has(t))).length;
+        best = Math.max(best, memberTokens.length ? hits / memberTokens.length : 0);
+      }
+      return best;
+    },
+    /**
+     * Sibling evidence: the guess token is itself an instance of a class ("sandwich" is food) that
+     * most members also belong to. Returns that member fraction (0 when the token is in no shared class).
+     */
+    siblingFraction(token, memberTokens) {
+      let best = 0;
+      for (const u of umbrellas) {
+        if (!u.vocab.has(token)) continue;
+        const hits = memberTokens.filter((m) => m.some((t) => u.vocab.has(t))).length;
+        best = Math.max(best, memberTokens.length ? hits / memberTokens.length : 0);
+      }
+      return best;
+    },
+  };
+}
+
+export const UMBRELLAS: readonly UmbrellaClass[] = parseUmbrellas(SRC, tokenize);
+
+export const englishLexicon: Lexicon = makeLexicon(UMBRELLAS);
+export const { umbrellaFraction, siblingFraction } = englishLexicon;

@@ -62,41 +62,6 @@ export function clean(s: string, keepStar = false): string {
     .trim();
 }
 
-/** Guess → meaningful stemmed tokens. */
-export function tokenize(s: string): string[] {
-  return clean(s)
-    .split(' ')
-    .filter((t) => t && !FILLER.has(t))
-    .map(stem);
-}
-
-interface PatternToken {
-  t: string;
-  prefix: boolean;
-}
-interface Pattern {
-  toks: PatternToken[];
-  phrase: string;
-  hasPrefix: boolean;
-}
-
-export function compilePattern(answer: string): Pattern | null {
-  const toks: PatternToken[] = [];
-  for (const raw of clean(answer, true).split(' ')) {
-    if (!raw) continue;
-    if (raw.endsWith('*')) {
-      const p = raw.replace(/\*+$/, '');
-      if (p) toks.push({ t: p, prefix: true });
-      continue;
-    }
-    const r = raw.replace(/\*/g, '');
-    if (!r || FILLER.has(r)) continue;
-    toks.push({ t: stem(r), prefix: false });
-  }
-  if (!toks.length) return null;
-  return { toks, phrase: toks.map((x) => x.t).join(''), hasPrefix: toks.some((x) => x.prefix) };
-}
-
 /** Optimal string alignment distance (Levenshtein + adjacent transpositions), early-exit above `max`. */
 export function editDistance(a: string, b: string, max = Infinity): number {
   if (Math.abs(a.length - b.length) > max) return max + 1;
@@ -135,42 +100,128 @@ function closeEnough(a: string, b: string): boolean {
   return editDistance(a, b, max) <= max;
 }
 
-function tokenMatches(g: string, p: PatternToken): boolean {
-  if (p.prefix) return g.startsWith(p.t);
-  if (g === p.t) return true;
-  return g.length >= 6 && p.t.length >= 6 && editDistance(g, p.t, 1) <= 1;
+export interface PatternToken {
+  t: string;
+  prefix: boolean;
 }
-
-/** Per-category compiled pattern cache (categories are module constants). */
-const cache = new WeakMap<object, Pattern[]>();
+export interface Pattern {
+  toks: PatternToken[];
+  phrase: string;
+  hasPrefix: boolean;
+}
 
 export interface Matchable {
   name: string;
   accept: readonly string[];
 }
 
-export function patternsFor(cat: Matchable): Pattern[] {
-  let ps = cache.get(cat);
-  if (!ps) {
-    ps = [cat.name, ...cat.accept].map(compilePattern).filter((p): p is Pattern => p !== null);
-    cache.set(cat, ps);
-  }
-  return ps;
+/** Language-specific pieces of the pipeline. */
+export interface MatcherConfig {
+  /** Lowercase, strip accents and punctuation; keeps `*` when asked (answer patterns). */
+  clean(s: string, keepStar?: boolean): string;
+  filler: ReadonlySet<string>;
+  stem(word: string): string;
+  /**
+   * Optional lenient fold applied when comparing tokens of 3+ letters (Spanish: ñ → n, so
+   * "montana" still finds "montaña"). Identity when omitted.
+   */
+  fold?(s: string): string;
+  /**
+   * Whole-phrase typo tolerance per token instead of on the joined phrase: the guess must have the
+   * same number of tokens, each within typo range of the answer's. Stops "dichos con oso" passing for
+   * "dichos con ojo" when the distinguishing word is short. Off for English (original behaviour).
+   */
+  strictPhrase?: boolean;
 }
 
-/** True when the guess has at least one meaningful (non-filler) token. */
-export function isMeaningful(guess: string): boolean {
-  return tokenize(guess).length > 0;
+export interface Matcher {
+  clean(s: string, keepStar?: boolean): string;
+  stem(word: string): string;
+  /** Guess → meaningful stemmed tokens. */
+  tokenize(s: string): string[];
+  compilePattern(answer: string): Pattern | null;
+  patternsFor(cat: Matchable): Pattern[];
+  /** True when the guess has at least one meaningful (non-filler) token. */
+  isMeaningful(guess: string): boolean;
+  isMatch(guess: string, cat: Matchable): boolean;
 }
 
-export function isMatch(guess: string, cat: Matchable): boolean {
-  const g = tokenize(guess);
-  if (!g.length) return false;
-  const gPhrase = g.join('');
-  for (const p of patternsFor(cat)) {
-    // Token-set match. Cap extra tokens so "animals colors planets keys" can't spray-match everything.
-    if (g.length <= p.toks.length + 3 && p.toks.every((pt) => g.some((gt) => tokenMatches(gt, pt)))) return true;
-    if (!p.hasPrefix && closeEnough(gPhrase, p.phrase)) return true;
+export function createMatcher(cfg: MatcherConfig): Matcher {
+  const { clean, filler, stem } = cfg;
+  const fold = cfg.fold;
+  const same = (a: string, b: string) => a === b || (!!fold && a.length >= 3 && b.length >= 3 && fold(a) === fold(b));
+
+  const tokenize = (s: string): string[] =>
+    clean(s)
+      .split(' ')
+      .filter((t) => t && !filler.has(t))
+      .map(stem);
+
+  function compilePattern(answer: string): Pattern | null {
+    const toks: PatternToken[] = [];
+    for (const raw of clean(answer, true).split(' ')) {
+      if (!raw) continue;
+      if (raw.endsWith('*')) {
+        const p = raw.replace(/\*+$/, '');
+        if (p) toks.push({ t: p, prefix: true });
+        continue;
+      }
+      const r = raw.replace(/\*/g, '');
+      if (!r || filler.has(r)) continue;
+      toks.push({ t: stem(r), prefix: false });
+    }
+    if (!toks.length) return null;
+    return { toks, phrase: toks.map((x) => x.t).join(''), hasPrefix: toks.some((x) => x.prefix) };
   }
-  return false;
+
+  function tokenMatches(g: string, p: PatternToken): boolean {
+    if (p.prefix) return g.startsWith(p.t) || (!!fold && p.t.length >= 3 && fold(g).startsWith(fold(p.t)));
+    if (same(g, p.t)) return true;
+    return g.length >= 6 && p.t.length >= 6 && editDistance(fold ? fold(g) : g, fold ? fold(p.t) : p.t, 1) <= 1;
+  }
+
+  /** Per-category compiled pattern cache (categories are module constants). */
+  const cache = new WeakMap<object, Pattern[]>();
+  function patternsFor(cat: Matchable): Pattern[] {
+    let ps = cache.get(cat);
+    if (!ps) {
+      ps = [cat.name, ...cat.accept].map(compilePattern).filter((p): p is Pattern => p !== null);
+      cache.set(cat, ps);
+    }
+    return ps;
+  }
+
+  function isMatch(guess: string, cat: Matchable): boolean {
+    const g = tokenize(guess);
+    if (!g.length) return false;
+    const gPhrase = g.join('');
+    for (const p of patternsFor(cat)) {
+      // Token-set match. Cap extra tokens so "animals colors planets keys" can't spray-match everything.
+      if (g.length <= p.toks.length + 3 && p.toks.every((pt) => g.some((gt) => tokenMatches(gt, pt)))) return true;
+      if (p.hasPrefix) continue;
+      if (cfg.strictPhrase) {
+        const f = fold ?? ((x: string) => x);
+        if (f(gPhrase) === f(p.phrase)) return true;
+        if (g.length === p.toks.length && p.toks.every((pt, i) => closeEnough(f(g[i]), f(pt.t)))) return true;
+      } else if (closeEnough(gPhrase, p.phrase) || (fold && gPhrase.length >= 3 && closeEnough(fold(gPhrase), fold(p.phrase)))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return {
+    clean,
+    stem,
+    tokenize,
+    compilePattern,
+    patternsFor,
+    isMeaningful: (guess) => tokenize(guess).length > 0,
+    isMatch,
+  };
 }
+
+/** The English matcher (the original Pinpoint pipeline). */
+export const englishMatcher: Matcher = createMatcher({ clean, filler: FILLER, stem });
+
+export const { tokenize, compilePattern, patternsFor, isMeaningful, isMatch } = englishMatcher;

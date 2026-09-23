@@ -12,7 +12,8 @@ export interface Category {
   accept: string[];
 }
 
-function parse(src: string): Category[] {
+/** Parse `Name | members | accepted answers` lines (`#` comments and blank lines skipped). */
+export function parseCategories(src: string): Category[] {
   const out: Category[] = [];
   for (const raw of src.split('\n')) {
     const line = raw.trim();
@@ -33,4 +34,4 @@ function parse(src: string): Category[] {
   return out;
 }
 
-export const CATEGORIES: readonly Category[] = [wordplay, things, knowledge, culture].flatMap(parse);
+export const CATEGORIES: readonly Category[] = [wordplay, things, knowledge, culture].flatMap(parseCategories);

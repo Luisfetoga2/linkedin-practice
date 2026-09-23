@@ -12,8 +12,8 @@
  * The best source wins, the runner-up adds a little, and wrong guesses are capped below 100.
  * Correct guesses (isMatch) are always 100.
  */
-import { siblingFraction, umbrellaFraction } from './lexicon';
-import { editDistance, isMatch, patternsFor, tokenize, type Matchable } from './match';
+import { englishLexicon, type Lexicon } from './lexicon';
+import { editDistance, englishMatcher, type Matchable, type Matcher } from './match';
 
 export interface Scorable extends Matchable {
   words: readonly string[];
@@ -74,8 +74,6 @@ function termScore(guess: string[], term: Tok[]): number {
   return 0.65 * prec + 0.35 * cov;
 }
 
-const toks = (s: string): Tok[] => tokenize(s).map((t) => ({ t, prefix: false }));
-
 /** Character trigram Dice coefficient on space-free cleaned strings. */
 export function trigramSim(a: string, b: string): number {
   const grams = (s: string) => {
@@ -106,12 +104,12 @@ interface Compiled {
   members: Tok[][];
   nearSrc: readonly string[];
 }
-const compiledCache = new WeakMap<object, Compiled>();
 
-function compile(cat: Scorable, near: readonly string[]): Compiled {
-  let c = compiledCache.get(cat);
+function compileWith(m: Matcher, cache: WeakMap<object, Compiled>, cat: Scorable, near: readonly string[]): Compiled {
+  let c = cache.get(cat);
   if (!c || c.nearSrc !== near) {
-    const answers = patternsFor(cat).map((p) => p.toks);
+    const toks = (s: string): Tok[] => m.tokenize(s).map((t) => ({ t, prefix: false }));
+    const answers = m.patternsFor(cat).map((p) => p.toks);
     c = {
       answers,
       answerPhrases: answers.map((a) => a.map((t) => t.t).join('')),
@@ -119,7 +117,7 @@ function compile(cat: Scorable, near: readonly string[]): Compiled {
       members: cat.words.map(toks).filter((t) => t.length),
       nearSrc: near,
     };
-    compiledCache.set(cat, c);
+    cache.set(cat, c);
   }
   return c;
 }
@@ -131,66 +129,82 @@ export function temperature(pct: number): Temperature {
   return 'cold';
 }
 
-/** Raw 0–1 relatedness of a (wrong) guess. Exposed for tests/tuning. */
-export function relatedness(guess: string, cat: Scorable, near: readonly string[]): number {
-  const g = tokenize(guess);
-  if (!g.length) return 0;
-  const c = compile(cat, near);
-
-  let answer = 0;
-  for (const a of c.answers) answer = Math.max(answer, termScore(g, a));
-
-  let nearBest = 0;
-  const n = c.near.length;
-  c.near.forEach((term, i) => {
-    const level = n > 1 ? W_NEAR_TOP - ((W_NEAR_TOP - W_NEAR_BOTTOM) * i) / (n - 1) : W_NEAR_TOP;
-    nearBest = Math.max(nearBest, termScore(g, term) * level);
-  });
-
-  let member = 0;
-  let memberHits = 0;
-  for (const m of c.members) {
-    const s = termScore(g, m);
-    if (s > 0.5) memberHits++;
-    member = Math.max(member, s);
-  }
-  member = Math.min(1, member + 0.1 * Math.max(0, memberHits - 1));
-
-  // Broad class guesses: best class-naming token, scaled by how much of the guess it is.
-  let umbrella = 0;
-  let classTokens = 0;
-  const memberToks = c.members.map((m) => m.map((t) => t.t));
-  for (const t of g) {
-    const f = umbrellaFraction(t, memberToks);
-    if (f > 0) {
-      classTokens++;
-      umbrella = Math.max(umbrella, W_UMBRELLA_BASE + W_UMBRELLA_SPAN * f);
-    }
-  }
-  umbrella *= Math.sqrt(classTokens / g.length);
-
-  let sibling = 0;
-  let siblingTokens = 0;
-  for (const t of g) {
-    const f = siblingFraction(t, memberToks);
-    if (f >= SIBLING_MIN) {
-      siblingTokens++;
-      sibling = Math.max(sibling, W_SIBLING_BASE + W_SIBLING_SPAN * f);
-    }
-  }
-  sibling *= Math.sqrt(siblingTokens / g.length);
-
-  const phrase = g.join('');
-  let chars = 0;
-  for (const p of c.answerPhrases) chars = Math.max(chars, trigramSim(phrase, p));
-
-  const parts = [answer * W_ANSWER, nearBest, member * W_MEMBER, umbrella, sibling, chars * W_CHARS].sort((x, y) => y - x);
-  const best = parts[0];
-  return Math.min(1, best + 0.3 * parts[1] * (1 - best));
+export interface Scorer {
+  /** Raw 0–1 relatedness of a (wrong) guess. Exposed for tests/tuning. */
+  relatedness(guess: string, cat: Scorable, near: readonly string[]): number;
+  closeness(guess: string, cat: Scorable, near: readonly string[]): Closeness;
 }
 
-export function closeness(guess: string, cat: Scorable, near: readonly string[]): Closeness {
-  if (isMatch(guess, cat)) return { pct: 100, temp: 'correct' };
-  const pct = Math.max(1, Math.min(WRONG_CAP, Math.round(relatedness(guess, cat, near) * 100)));
-  return { pct, temp: temperature(pct) };
+/** Bind the scoring pipeline to one language's matcher and umbrella lexicon. */
+export function createScorer(m: Matcher, lex: Lexicon): Scorer {
+  const cache = new WeakMap<object, Compiled>();
+
+  /** Raw 0–1 relatedness of a (wrong) guess. Exposed for tests/tuning. */
+  function relatedness(guess: string, cat: Scorable, near: readonly string[]): number {
+    const g = m.tokenize(guess);
+    if (!g.length) return 0;
+    const c = compileWith(m, cache, cat, near);
+
+    let answer = 0;
+    for (const a of c.answers) answer = Math.max(answer, termScore(g, a));
+
+    let nearBest = 0;
+    const n = c.near.length;
+    c.near.forEach((term, i) => {
+      const level = n > 1 ? W_NEAR_TOP - ((W_NEAR_TOP - W_NEAR_BOTTOM) * i) / (n - 1) : W_NEAR_TOP;
+      nearBest = Math.max(nearBest, termScore(g, term) * level);
+    });
+
+    let member = 0;
+    let memberHits = 0;
+    for (const mem of c.members) {
+      const s = termScore(g, mem);
+      if (s > 0.5) memberHits++;
+      member = Math.max(member, s);
+    }
+    member = Math.min(1, member + 0.1 * Math.max(0, memberHits - 1));
+
+    // Broad class guesses: best class-naming token, scaled by how much of the guess it is.
+    let umbrella = 0;
+    let classTokens = 0;
+    const memberToks = c.members.map((mem) => mem.map((t) => t.t));
+    for (const t of g) {
+      const f = lex.umbrellaFraction(t, memberToks);
+      if (f > 0) {
+        classTokens++;
+        umbrella = Math.max(umbrella, W_UMBRELLA_BASE + W_UMBRELLA_SPAN * f);
+      }
+    }
+    umbrella *= Math.sqrt(classTokens / g.length);
+
+    let sibling = 0;
+    let siblingTokens = 0;
+    for (const t of g) {
+      const f = lex.siblingFraction(t, memberToks);
+      if (f >= SIBLING_MIN) {
+        siblingTokens++;
+        sibling = Math.max(sibling, W_SIBLING_BASE + W_SIBLING_SPAN * f);
+      }
+    }
+    sibling *= Math.sqrt(siblingTokens / g.length);
+
+    const phrase = g.join('');
+    let chars = 0;
+    for (const p of c.answerPhrases) chars = Math.max(chars, trigramSim(phrase, p));
+
+    const parts = [answer * W_ANSWER, nearBest, member * W_MEMBER, umbrella, sibling, chars * W_CHARS].sort((x, y) => y - x);
+    const best = parts[0];
+    return Math.min(1, best + 0.3 * parts[1] * (1 - best));
+  }
+
+  function closeness(guess: string, cat: Scorable, near: readonly string[]): Closeness {
+    if (m.isMatch(guess, cat)) return { pct: 100, temp: 'correct' };
+    const pct = Math.max(1, Math.min(WRONG_CAP, Math.round(relatedness(guess, cat, near) * 100)));
+    return { pct, temp: temperature(pct) };
+  }
+
+  return { relatedness, closeness };
 }
+
+export const englishScorer: Scorer = createScorer(englishMatcher, englishLexicon);
+export const { relatedness, closeness } = englishScorer;

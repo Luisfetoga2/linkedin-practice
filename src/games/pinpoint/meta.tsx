@@ -22,7 +22,18 @@ export const meta: GameMeta = {
   scoring: 'guesses',
   maxGuesses: 5,
   hasHints: false,
-  contentLanguages: ['en'],
+  options: [
+    {
+      id: 'words',
+      label: { en: 'Words', es: 'Palabras' },
+      default: 'en',
+      followsLanguage: true,
+      choices: [
+        { value: 'en', label: { en: 'English', es: 'Inglés' } },
+        { value: 'es', label: { en: 'Spanish', es: 'Español' } },
+      ],
+    },
+  ],
   Icon,
   howToPlay: {
     en: (
@@ -39,11 +50,10 @@ export const meta: GameMeta = {
     es: (
       <>
         <p>Cinco palabras clave pertenecen a una categoría oculta. Descúbrela con la menor cantidad de intentos posible.</p>
-        <p>Por ahora, las palabras y las categorías están en inglés, así que escribe tus respuestas en inglés.</p>
         <ul>
           <li>Empiezas con una pista. Escribe la categoría y presiona Enter.</li>
           <li>Cada intento fallido revela la siguiente pista. Tienes 5 intentos.</li>
-          <li>Las respuestas aproximadas cuentan: “keys” sirve para <em>Things with keys</em>.</li>
+          <li>Las respuestas aproximadas cuentan: “llaves” sirve para <em>Cosas con llave</em>.</li>
           <li>Al terminar la ronda, verás qué tan cerca estuvo cada uno de tus intentos de la categoría.</li>
         </ul>
       </>

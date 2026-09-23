@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { GameProps } from '../../core/types';
 import { Check, Close } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
+import { CORE } from '../../i18n/core';
 import { CLUE_COUNT, displayWord, generatePuzzle } from './generator';
-import { clean, isMatch, isMeaningful } from './match';
-import { closeness, type Closeness } from './closeness';
-import { nearFor } from './near';
+import type { Closeness } from './closeness';
+import { contentIfLoaded, loadContent, type Content, type WordLang } from './content';
 import { STR } from './i18n';
 import styles from './Game.module.css';
 
@@ -27,9 +27,29 @@ function Lock() {
   );
 }
 
-export default function Game({ seed, lang, paused, onReady, onComplete }: GameProps) {
+export default function Game(props: GameProps) {
+  const wordLang: WordLang = props.options.words === 'es' ? 'es' : 'en';
+  const [content, setContent] = useState<Content | null>(() => contentIfLoaded(wordLang));
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (content) return;
+    let alive = true;
+    loadContent(wordLang).then(
+      (c) => alive && setContent(c),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [content, wordLang]);
+  if (!content) return <div className="lp-loading">{failed ? STR[props.lang].loadError : CORE[props.lang].loading}</div>;
+  return <Board {...props} content={content} />;
+}
+
+function Board({ seed, lang, paused, onReady, onComplete, content }: GameProps & { content: Content }) {
   const t = STR[lang];
-  const puzzle = useMemo(() => generatePuzzle(seed), [seed]);
+  const { clean, isMatch, isMeaningful } = content.matcher;
+  const puzzle = useMemo(() => generatePuzzle(seed, content.categories), [seed, content]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [status, setStatus] = useState<Status>('playing');
   const [text, setText] = useState('');
@@ -61,8 +81,8 @@ export default function Game({ seed, lang, paused, onReady, onComplete }: GamePr
   const left = MAX_GUESSES - used;
 
   const scoreAll = (list: Attempt[]): Closeness[] => {
-    const near = nearFor(puzzle.category.name);
-    return list.map((a) => closeness(a.text, puzzle.category, near));
+    const near = content.nearFor(puzzle.category.name);
+    return list.map((a) => content.scorer.closeness(a.text, puzzle.category, near));
   };
 
   const finish = (next: Attempt[], won: boolean) => {

@@ -20,6 +20,7 @@ export const STR = defineStrings(
     howClose: 'How close you were',
     howCloseAria: 'How close your guesses were',
     temp: { correct: 'Correct', hot: 'Hot', warm: 'Warm', cold: 'Cold' } as Record<Temperature, string>,
+    loadError: "Couldn't load the categories. Check your connection and try again.",
   },
   {
     clues: 'Pistas',
@@ -39,5 +40,6 @@ export const STR = defineStrings(
     howClose: 'Qué tan cerca estuviste',
     howCloseAria: 'Qué tan cerca estuvieron tus intentos',
     temp: { correct: 'Acierto', hot: 'Caliente', warm: 'Tibio', cold: 'Frío' },
+    loadError: 'No se pudieron cargar las categorías. Revisa tu conexión e inténtalo de nuevo.',
   },
 );
