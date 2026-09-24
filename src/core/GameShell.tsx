@@ -4,6 +4,7 @@ import { Stopwatch } from './stopwatch';
 import { Timer } from './components/Timer';
 import { ArrowLeft, Chart, Gear, Help, Play, Shuffle } from './components/Icons';
 import { Modal } from './components/Modal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Segmented, Toggle } from './components/Controls';
 import { ResultSheet, type FinishedRound } from './ResultSheet';
 import { href, navigate, useRoute } from '../lib/router';
@@ -47,7 +48,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState<FinishedRound | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [modal, setModal] = useState<null | 'help' | 'settings' | 'variant'>(null);
+  const [modal, setModal] = useState<null | 'help' | 'settings' | 'variant' | 'quit'>(null);
   const watch = useRef(new Stopwatch()).current;
   const hints = useRef(0);
   const completed = useRef(false);
@@ -69,8 +70,117 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     }
   }, [meta.id]);
 
+  // ---------- Leave guard: confirm before quitting a round you've started ----------
+  // Once you touch the board, an extra history entry with the same URL is pushed. Browser or
+  // gesture "back" then pops only that entry (the page stays put) and we ask first. After the
+  // round is over, popping it just continues back, so it never costs an extra press.
+  const [touched, setTouched] = useState(false);
+  const guarded = phase === 'playing' && touched;
+  const guardedRef = useRef(guarded);
+  guardedRef.current = guarded;
+  const guardPushed = useRef(false);
+  const leaving = useRef(false);
+  /** Where to go once the guard entry is popped (in-app links). */
+  const pendingTarget = useRef<string | null>(null);
+  /** The game's current URL; the entry under the guard may still hold an older seed. */
+  const gameUrl = useRef(window.location.href);
+  /** Why the quit dialog is open: browser back, or an in-app link to this hash. */
+  const quitVia = useRef<'back' | string>('back');
+
+  const pushGuard = useCallback(() => {
+    if (guardPushed.current) return;
+    window.history.pushState({ lpGuard: meta.id }, '', gameUrl.current);
+    guardPushed.current = true;
+  }, [meta.id]);
+
+  const markTouched = useCallback(() => {
+    if (phase !== 'playing') return;
+    setTouched(true);
+    pushGuard(); // inside the user's gesture, so browsers keep the entry for "back"
+  }, [phase, pushGuard]);
+
+  useEffect(() => {
+    const onPop = () => {
+      if (!guardPushed.current || window.history.state?.lpGuard) return;
+      guardPushed.current = false;
+      if (pendingTarget.current) {
+        const to = pendingTarget.current;
+        pendingTarget.current = null;
+        window.location.hash = to;
+      } else if (guardedRef.current && !leaving.current) {
+        window.history.replaceState(null, '', gameUrl.current);
+        quitVia.current = 'back';
+        setModal('quit');
+      } else window.history.back();
+    };
+    const onUnload = (e: BeforeUnloadEvent) => {
+      if (!guardedRef.current || leaving.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('beforeunload', onUnload);
+    };
+  }, []);
+
+  // Keyboard games (Wordle, Pinpoint, Sudoku digits...) count as touched on their first key.
+  useEffect(() => {
+    if (phase !== 'playing' || touched || modal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || ['Tab', 'Escape', 'Shift', 'Meta', 'Control', 'Alt', 'CapsLock'].includes(e.key)) return;
+      if ((e.target as HTMLElement | null)?.closest?.('.lp-topbar, .lp-play-bar')) return;
+      markTouched();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, touched, modal, markTouched]);
+
+  /** In-app links out of the game (back arrow, stats): ask first, and never leave the guard behind. */
+  const leaveTo = (e: React.MouseEvent<HTMLAnchorElement>, target: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    if (guarded) {
+      e.preventDefault();
+      quitVia.current = target;
+      setModal('quit');
+    } else if (guardPushed.current) {
+      e.preventDefault();
+      pendingTarget.current = target;
+      window.history.back();
+    }
+  };
+
+  const stay = () => {
+    setModal(null);
+    if (quitVia.current === 'back') pushGuard();
+  };
+
+  const quit = () => {
+    leaving.current = true;
+    setModal(null);
+    if (quitVia.current !== 'back') {
+      if (guardPushed.current) {
+        pendingTarget.current = quitVia.current;
+        window.history.back();
+      } else window.location.hash = quitVia.current;
+      return;
+    }
+    // The guard entry is already gone; keep going back. Opened straight from a link, there's
+    // nothing behind this page, so fall back to the games list.
+    const here = window.location.href;
+    window.history.back();
+    window.setTimeout(() => {
+      if (window.location.href === here) navigate('', undefined, true);
+    }, 350);
+  };
+
   const syncUrl = useCallback(
-    (s: number, opts: Record<string, string>) => navigate(meta.id, { s: seedToCode(s), ...opts }, true),
+    (s: number, opts: Record<string, string>) => {
+      navigate(meta.id, { s: seedToCode(s), ...opts }, true);
+      gameUrl.current = window.location.href;
+    },
     [meta.id],
   );
 
@@ -79,6 +189,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
       watch.reset();
       hints.current = 0;
       completed.current = false;
+      setTouched(false);
       setSeed(nextSeed);
       setOptions(opts);
       writeJSON(`last-options:${meta.id}`, opts);
@@ -133,7 +244,15 @@ export function GameShell({ entry }: { entry: GameEntry }) {
         seed,
       });
       const isBest = result.won && (prior.bestMs === null || ms < prior.bestMs);
-      setFinished({ result, ms, hints: hints.current, isBest, priorAvgMs: prior.avgMs, seed, options });
+      setFinished({
+        result,
+        ms,
+        hints: hints.current,
+        isBest,
+        priorAvgMs: prior.avgMs,
+        seed,
+        options,
+      });
       setPhase('done');
       window.setTimeout(() => setShowResult(true), result.won ? 900 : 600);
     },
@@ -191,7 +310,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     <div className="lp-shell" style={style}>
       <header className="lp-topbar">
         <div className="lp-topbar-inner">
-          <a className="icon-btn" href={href('')} aria-label={t.backToGames}>
+          <a className="icon-btn" href={href('')} onClick={(e) => leaveTo(e, href(''))} aria-label={t.backToGames}>
             <ArrowLeft size={22} />
           </a>
           <div className="lp-topbar-title">
@@ -204,7 +323,13 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             <button className="icon-btn" onClick={() => setModal('help')} aria-label={t.howToPlay} title={t.howToPlay}>
               <Help size={22} />
             </button>
-            <a className="icon-btn" href={href(`stats/${meta.id}`)} aria-label={t.statistics} title={t.statistics}>
+            <a
+              className="icon-btn"
+              href={href(`stats/${meta.id}`)}
+              onClick={(e) => leaveTo(e, href(`stats/${meta.id}`))}
+              aria-label={t.statistics}
+              title={t.statistics}
+            >
               <Chart size={22} />
             </a>
             <button className="icon-btn" onClick={() => setModal('settings')} aria-label={t.settings} title={t.settings}>
@@ -231,7 +356,10 @@ export function GameShell({ entry }: { entry: GameEntry }) {
                   tone="onColor"
                   label={pick(opt.label, lang)}
                   value={options[opt.id]}
-                  choices={opt.choices.map((c) => ({ value: c.value, label: pick(c.label, lang) }))}
+                  choices={opt.choices.map((c) => ({
+                    value: c.value,
+                    label: pick(c.label, lang),
+                  }))}
                   onChange={(v) => setOptions({ ...options, [opt.id]: v })}
                 />
               </div>
@@ -271,19 +399,31 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             </div>
 
             {englishOnly && <p className="lp-lang-note">{t.englishOnly}</p>}
-            <div className={`lp-board-area${paused ? ' is-paused' : ''}`}>
-              <Suspense fallback={<div className="lp-loading">{t.loading}</div>}>
-                <Game
-                  key={`${round}-${lang}`}
-                  seed={seed}
-                  lang={lang}
-                  options={options}
-                  paused={paused || phase === 'done'}
-                  onReady={onReady}
-                  onHint={onHint}
-                  onComplete={onComplete}
-                />
-              </Suspense>
+            <div className={`lp-board-area${paused ? ' is-paused' : ''}`} onPointerDownCapture={touched ? undefined : markTouched}>
+              <ErrorBoundary
+                key={round}
+                fallback={(reload) => (
+                  <div className="lp-loading lp-load-failed">
+                    <p>{t.loadFailed}</p>
+                    <button className="btn btn-primary" onClick={reload}>
+                      {t.reload}
+                    </button>
+                  </div>
+                )}
+              >
+                <Suspense fallback={<div className="lp-loading">{t.loading}</div>}>
+                  <Game
+                    key={`${round}-${lang}`}
+                    seed={seed}
+                    lang={lang}
+                    options={options}
+                    paused={paused || phase === 'done'}
+                    onReady={onReady}
+                    onHint={onHint}
+                    onComplete={onComplete}
+                  />
+                </Suspense>
+              </ErrorBoundary>
               {paused && (
                 <div className="lp-paused">
                   <p className="lp-paused-title">{t.paused}</p>
@@ -316,15 +456,25 @@ export function GameShell({ entry }: { entry: GameEntry }) {
         </main>
       )}
 
-      {finished && (
-        <ResultSheet
-          open={showResult}
-          meta={meta}
-          round={finished}
-          onClose={() => setShowResult(false)}
-          onPlayAgain={() => newRound()}
-        />
-      )}
+      {finished && <ResultSheet open={showResult} meta={meta} round={finished} onClose={() => setShowResult(false)} onPlayAgain={() => newRound()} />}
+
+      <Modal
+        open={modal === 'quit'}
+        onClose={stay}
+        title={t.quitTitle}
+        footer={
+          <div className="lp-quit-actions">
+            <button className="btn btn-secondary" onClick={stay}>
+              {t.keepPlaying}
+            </button>
+            <button className="btn btn-primary" onClick={quit}>
+              {t.quit}
+            </button>
+          </div>
+        }
+      >
+        <p className="lp-quit-body">{t.quitBody}</p>
+      </Modal>
 
       <Modal open={modal === 'help'} onClose={() => setModal(null)} title={t.howToPlayTitle(name)}>
         <div className="lp-howto">{pick(meta.howToPlay, lang)}</div>
@@ -359,7 +509,10 @@ function VariantPicker({ entry, current, onPick }: { entry: GameEntry; current: 
           <Segmented
             label={pick(opt.label, lang)}
             value={draft[opt.id]}
-            choices={opt.choices.map((c) => ({ value: c.value, label: pick(c.label, lang) }))}
+            choices={opt.choices.map((c) => ({
+              value: c.value,
+              label: pick(c.label, lang),
+            }))}
             onChange={(v) => setDraft({ ...draft, [opt.id]: v })}
           />
         </div>

@@ -767,3 +767,34 @@
 .lp-control svg {
   flex-shrink: 0;
 }
+
+/* ---------- Quit confirmation / load failure ---------- */
+.lp-quit-body {
+  margin: 0;
+  color: var(--text-2);
+}
+.lp-quit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.lp-quit-actions .btn {
+  flex: 1 1 0;
+  max-width: 180px;
+}
+@media (max-width: 600px) {
+  .lp-quit-actions .btn {
+    max-width: none;
+  }
+}
+.lp-load-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.lp-load-failed p {
+  margin: 0;
+}
