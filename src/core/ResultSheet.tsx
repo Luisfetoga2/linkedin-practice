@@ -85,7 +85,11 @@ export function ResultSheet({ open, meta, round, onClose, onPlayAgain }: { open:
         <div className="lp-result-stats">
           <Stat label={t.played} value={stats.played} />
           {meta.scoring === 'guesses' ? <Stat label={t.winPct} value={Math.round(stats.winRate * 100)} /> : <Stat label={t.best} value={stats.bestMs !== null ? formatTime(stats.bestMs) : '–'} />}
-          <Stat label={t.average} value={stats.avgMs !== null ? formatTime(stats.avgMs) : '–'} />
+          {meta.canLose ? (
+            <Stat label={t.winPct} value={Math.round(stats.winRate * 100)} />
+          ) : (
+            <Stat label={t.average} value={stats.avgMs !== null ? formatTime(stats.avgMs) : '–'} />
+          )}
           <Stat label={t.streak} value={`🔥 ${stats.streak.current}`} />
         </div>
 

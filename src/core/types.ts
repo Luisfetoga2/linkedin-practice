@@ -1,7 +1,19 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { Lang, Localized } from '../lib/i18n';
 
-export type GameId = 'queens' | 'tango' | 'zip' | 'sudoku' | 'patches' | 'wend' | 'crossclimb' | 'pinpoint' | 'wordle' | 'nonogram' | 'mini';
+export type GameId =
+  | 'queens'
+  | 'tango'
+  | 'zip'
+  | 'sudoku'
+  | 'patches'
+  | 'wend'
+  | 'crossclimb'
+  | 'pinpoint'
+  | 'wordle'
+  | 'nonogram'
+  | 'mini'
+  | 'minesweeper';
 
 /** A selectable puzzle variant shown on the intro screen (size, difficulty, word length...). */
 export interface GameOption {
@@ -37,6 +49,10 @@ export interface GameMeta {
   /** 'time' = ranked by solve time. 'guesses' = can be lost, ranked by guesses used. */
   scoring: 'time' | 'guesses';
   maxGuesses?: number;
+  /** A time-scored game that can still be lost (Minesweeper): win rate is shown next to times. */
+  canLose?: boolean;
+  /** Wider play area (px) for large boards, given the selected options. Defaults to --board-max. */
+  boardMax?: (options: Record<string, string>) => number | undefined;
   /** False for games without hints (Pinpoint): hides hint badges in results. Defaults to true. */
   hasHints?: boolean;
   howToPlay: Localized<ReactNode>;

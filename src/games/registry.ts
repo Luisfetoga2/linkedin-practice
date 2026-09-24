@@ -10,8 +10,9 @@ import { meta as crossclimb } from './crossclimb/meta';
 import { meta as wordle } from './wordle/meta';
 import { meta as nonogram } from './nonogram/meta';
 import { meta as mini } from './mini/meta';
+import { meta as minesweeper } from './minesweeper/meta';
 
-/** Home-page order mirrors LinkedIn's games page; Wordle, Nonogram and the Mini Crossword are extras. */
+/** Home-page order mirrors LinkedIn's games page; Wordle, Nonogram, the Mini Crossword and Minesweeper are extras. */
 export const games: GameEntry[] = [
   { meta: wend, load: () => import('./wend/Game') },
   { meta: patches, load: () => import('./patches/Game') },
@@ -24,6 +25,7 @@ export const games: GameEntry[] = [
   { meta: wordle, load: () => import('./wordle/Game') },
   { meta: nonogram, load: () => import('./nonogram/Game') },
   { meta: mini, load: () => import('./mini/Game') },
+  { meta: minesweeper, load: () => import('./minesweeper/Game') },
 ];
 
 export const gameIds = games.map((g) => g.meta.id);

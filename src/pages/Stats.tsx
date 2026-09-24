@@ -182,7 +182,7 @@ function GameStatsView({ entry, history }: { entry: GameEntry; history: PlayReco
         <>
           <div className="stats-kpis">
             <Kpi label={t.played} value={s.played} />
-            <Kpi label={guessGame ? t.winRate : t.solved} value={guessGame ? `${Math.round(s.winRate * 100)}%` : s.wins} />
+            <Kpi label={guessGame || meta.canLose ? t.winRate : t.solved} value={guessGame || meta.canLose ? `${Math.round(s.winRate * 100)}%` : s.wins} />
             <Kpi label={t.dayStreakLabel} value={s.streak.current} sub={t.bestN(s.streak.max)} />
             {guessGame ? (
               <Kpi label={t.winStreak} value={s.winStreak} sub={t.bestN(s.maxWinStreak)} />

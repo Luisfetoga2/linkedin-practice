@@ -179,7 +179,13 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     .filter(Boolean)
     .join(' · ');
 
-  const style = { '--game-color': meta.color, '--game-color-end': meta.colorEnd, '--game-tint': meta.tint } as React.CSSProperties;
+  const boardMax = meta.boardMax?.(options);
+  const style = {
+    '--game-color': meta.color,
+    '--game-color-end': meta.colorEnd,
+    '--game-tint': meta.tint,
+    ...(boardMax ? { '--board-max': `${boardMax}px` } : {}),
+  } as React.CSSProperties;
 
   return (
     <div className="lp-shell" style={style}>
@@ -236,7 +242,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             <div className="lp-intro-stats">
               {stats.streak.current > 0 && <span>{t.dayStreak(stats.streak.current)}</span>}
               {stats.bestMs !== null && <span>{t.bestTime(formatTime(stats.bestMs))}</span>}
-              {meta.scoring === 'guesses' && stats.played > 0 && <span>{t.winsPct(Math.round(stats.winRate * 100))}</span>}
+              {(meta.scoring === 'guesses' || meta.canLose) && stats.played > 0 && <span>{t.winsPct(Math.round(stats.winRate * 100))}</span>}
               <span>{t.solvedCount(stats.wins)}</span>
             </div>
           </div>

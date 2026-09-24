@@ -49,7 +49,7 @@ export function Home() {
                                 </span>
                               )}
                               {meta.scoring === 'time' && s.bestMs !== null && <span>{t.bestTime(formatTime(s.bestMs))}</span>}
-                              {meta.scoring === 'guesses' && <span>{t.wonPct(Math.round(s.winRate * 100))}</span>}
+                              {(meta.scoring === 'guesses' || (meta.canLose && s.played > 0)) && <span>{t.wonPct(Math.round(s.winRate * 100))}</span>}
                               <span>{t.solvedCount(s.wins)}</span>
                             </>
                           )}
