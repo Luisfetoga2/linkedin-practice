@@ -10,6 +10,9 @@ import styles from './Game.module.css';
 const FLAG = MINE;
 type Mode = 'dig' | 'flag';
 const LONG_PRESS_MS = 380;
+/** Opening ripples outward from the tapped square: per-square step and cap, kept short so play stays fast. */
+const RIPPLE_STEP_MS = 16;
+const RIPPLE_MAX_MS = 220;
 
 interface ShownHint {
   text: string;
@@ -22,6 +25,22 @@ function flagsAround(b: Board, st: Knowledge, i: number): number {
   let k = 0;
   for (const j of b.nb[i]) if (st[j] === FLAG) k++;
   return k;
+}
+
+/** Squares between two cells, counting diagonals as one step. */
+function steps(b: Board, a: number, c: number): number {
+  return Math.max(Math.abs(Math.floor(a / b.w) - Math.floor(c / b.w)), Math.abs((a % b.w) - (c % b.w)));
+}
+
+/** Every flag placed, and every one of them on a mine. */
+function flagsSolve(b: Board, st: Knowledge): boolean {
+  let flags = 0;
+  for (let i = 0; i < st.length; i++) {
+    if (st[i] !== FLAG) continue;
+    if (!b.mines[i]) return false;
+    flags++;
+  }
+  return flags === b.mineCount;
 }
 
 function hiddenAround(b: Board, st: Knowledge, i: number): number[] {
@@ -75,6 +94,8 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   };
   const [status, setStatus] = useState<'play' | 'won' | 'lost'>('play');
   const [boom, setBoom] = useState(-1);
+  /** Reveal delay (ms) of the squares opened by the latest move. */
+  const [delays, setDelays] = useState<Map<number, number>>(() => new Map());
   const [mode, setMode] = useState<Mode>('dig');
   const [hint, setHint] = useState<ShownHint | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
@@ -121,15 +142,22 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     cb.current.onComplete(won ? { won: true, share: `💣 ${name} ${w}×${h}` } : { won: false, summary: t.boom });
   };
 
-  const settle = (b: Board, next: Knowledge) => {
+  /** Applies a move that started at `origin`: animates what it opened and checks for a win. */
+  const settle = (b: Board, next: Knowledge, origin: number) => {
+    const prev = stRef.current;
     let open = 0;
     for (let i = 0; i < next.length; i++) if (next[i] === OPEN) open++;
-    if (open === w * h - b.mineCount) {
-      // Cleared: every mine gets its flag.
-      const final = next.slice();
-      for (let i = 0; i < final.length; i++) if (b.mines[i]) final[i] = FLAG;
-      finish(true, final);
-    } else setSt(next);
+    // Won by opening every safe square, or by flagging every mine correctly (the rest opens itself).
+    const won = open === w * h - b.mineCount || flagsSolve(b, next);
+    const final = next.slice();
+    if (won) for (let i = 0; i < final.length; i++) final[i] = b.mines[i] ? FLAG : OPEN;
+    const d = new Map<number, number>();
+    for (let i = 0; i < final.length; i++) {
+      if (final[i] === OPEN && prev[i] !== OPEN) d.set(i, Math.min(steps(b, origin, i) * RIPPLE_STEP_MS, RIPPLE_MAX_MS));
+    }
+    setDelays(d);
+    if (won) finish(true, final);
+    else setSt(final);
   };
 
   const chord = (i: number) => {
@@ -142,7 +170,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (hit !== undefined) return finish(false, cur, hit);
     const next = cur.slice();
     for (const j of around) openFrom(b, next, j);
-    settle(b, next);
+    settle(b, next, i);
   };
 
   const dig = (i: number) => {
@@ -158,7 +186,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (b.mines[i]) return finish(false, cur, i);
     const next = cur.slice();
     openFrom(b, next, i);
-    settle(b, next);
+    settle(b, next, i);
   };
 
   const toggleFlag = (i: number) => {
@@ -166,7 +194,9 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (cur[i] === OPEN) return chord(i);
     const next = cur.slice();
     next[i] = cur[i] === FLAG ? HIDDEN : FLAG;
-    setSt(next);
+    const b = boardRef.current;
+    if (b) settle(b, next, i);
+    else setSt(next);
   };
 
   const primary = (i: number) => (mode === 'dig' ? dig(i) : toggleFlag(i));
@@ -246,16 +276,10 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     setHint(shown);
     setFocus(hnt.cell);
     const next = stRef.current.slice();
-    if (hnt.kind === 'wrongFlag') {
-      next[hnt.cell] = HIDDEN;
-      setSt(next);
-    } else if (hnt.kind === 'deduce' && hnt.d.mine) {
-      next[hnt.cell] = FLAG;
-      setSt(next);
-    } else {
-      openFrom(b, next, hnt.cell);
-      settle(b, next);
-    }
+    if (hnt.kind === 'wrongFlag') next[hnt.cell] = HIDDEN;
+    else if (hnt.kind === 'deduce' && hnt.d.mine) next[hnt.cell] = FLAG;
+    else openFrom(b, next, hnt.cell);
+    settle(b, next, hnt.cell);
   };
 
   // ---------- Keyboard: arrows move, Space/Enter act, F flags ----------
@@ -306,6 +330,8 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
       const showMine = status === 'lost' && isMine && v !== FLAG;
       const wrongFlag = status === 'lost' && v === FLAG && !isMine;
       const n = board && v === OPEN ? board.counts[i] : 0;
+      // Opened squares ripple out from the move; on a loss the mines ripple out from the one you hit.
+      const rd = showMine && board && boom >= 0 ? Math.min(steps(board, boom, i) * 12, 300) : (delays.get(i) ?? 0);
       const state = v === OPEN ? (n ? String(n) : t.blank) : v === FLAG ? t.flagged : showMine ? t.mineSq : t.hiddenSq;
       const cls = [
         styles.sq,
@@ -320,7 +346,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
         status === 'won' && v === FLAG ? styles.wonFlag : '',
       ].join(' ');
       squares.push(
-        <div key={i} role="gridcell" aria-label={t.cellLabel(dr + 1, dc + 1, state)} className={cls} style={{ '--d': `${(dr + dc) * 18}ms` } as CSSProperties}>
+        <div key={i} role="gridcell" aria-label={t.cellLabel(dr + 1, dc + 1, state)} className={cls} style={{ '--d': `${(dr + dc) * 18}ms`, '--rd': `${rd}ms` } as CSSProperties}>
           {n > 0 && <span className={styles[`n${n}`]}>{n}</span>}
           {v === FLAG && <FlagIcon />}
           {showMine && <MineIcon />}

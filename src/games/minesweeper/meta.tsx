@@ -48,23 +48,23 @@ export const meta: GameMeta = {
   howToPlay: {
     en: (
       <>
-        <p>Open every square that isn’t a mine.</p>
+        <p>Open every square that isn’t a mine, or flag every mine.</p>
         <ul>
           <li>A number tells you how many of the 8 squares around it hide a mine.</li>
           <li>Your first tap is always safe and opens an area. Every board can be cleared by logic alone, with no 50/50 guesses.</li>
           <li>Right-click, long-press, or switch to Flag mode to mark a mine. Tap a number whose mines are all flagged to open the rest of its neighbors.</li>
-          <li>Opening a mine ends the round. Hints point out the next square you can be sure about, and why.</li>
+          <li>You win as soon as every safe square is open or every mine is flagged correctly. If all your flags are down and the round hasn’t ended, one of them is wrong. Opening a mine ends the round. Hints point out the next square you can be sure about, and why.</li>
         </ul>
       </>
     ),
     es: (
       <>
-        <p>Abre todas las casillas que no tengan una mina.</p>
+        <p>Abre todas las casillas que no tengan una mina, o marca todas las minas.</p>
         <ul>
           <li>Cada número indica cuántas de las 8 casillas que lo rodean esconden una mina.</li>
           <li>El primer toque siempre es seguro y abre una zona. Todos los tableros se resuelven solo con lógica, sin tener que adivinar.</li>
           <li>Haz clic derecho, mantén presionado o cambia al modo Bandera para marcar una mina. Toca un número con todas sus minas marcadas para abrir el resto de sus vecinas.</li>
-          <li>Si abres una mina, pierdes la ronda. Las pistas te muestran la próxima casilla de la que puedes estar seguro, y por qué.</li>
+          <li>Ganas en cuanto abres todas las casillas seguras o marcas bien todas las minas. Si ya pusiste todas las banderas y la ronda no termina, alguna está mal. Si abres una mina, pierdes la ronda. Las pistas te muestran la próxima casilla de la que puedes estar seguro, y por qué.</li>
         </ul>
       </>
     ),

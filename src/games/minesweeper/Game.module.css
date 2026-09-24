@@ -105,7 +105,11 @@
 }
 .open {
   background: var(--ms-open);
-  animation: opened 0.18s ease-out;
+  /* Starts as a hidden tile, then settles open; --rd staggers it into a ripple. */
+  animation: uncover 0.14s ease-out var(--rd, 0ms) backwards;
+}
+.open > span {
+  animation: numberIn 0.16s ease-out var(--rd, 0ms) backwards;
 }
 .open.alt {
   background: var(--ms-open-alt);
@@ -171,7 +175,7 @@
     linear-gradient(-45deg, transparent 45%, var(--ms-red) 45%, var(--ms-red) 55%, transparent 55%);
 }
 .lost .mine {
-  animation: plant 0.25s ease-out;
+  animation: plant 0.2s ease-out var(--rd, 0ms) backwards;
 }
 
 /* ---------- Focus and hints ---------- */
@@ -259,9 +263,17 @@
   color: var(--text);
 }
 
-@keyframes opened {
+@keyframes uncover {
   from {
-    filter: brightness(1.06);
+    background: var(--ms-hidden);
+    transform: scale(0.86);
+    border-radius: 4px;
+  }
+}
+@keyframes numberIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
   }
 }
 @keyframes plant {
