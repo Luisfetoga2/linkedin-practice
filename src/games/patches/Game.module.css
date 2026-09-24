@@ -130,9 +130,9 @@
   display: grid;
   place-items: center;
   border-radius: 4px;
-  border: 1.5px solid var(--pc);
+  border: 1.5px solid var(--pc, var(--text-3));
   background: var(--cell-bg);
-  color: var(--pc);
+  color: var(--pc, var(--text-2));
   font-size: clamp(10px, calc(var(--cell) * 0.14), 13px);
   font-weight: 700;
   line-height: 1;

@@ -408,7 +408,11 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
               className={`${styles.preview}${preview.bad ? ` ${styles.previewBad}` : ''}`}
               style={{ ...rectStyle(preview.rect, n), ...(preview.clue >= 0 ? tint(clues[preview.clue].color) : {}) }}
             >
-              {preview.clue >= 0 && !preview.bad && <CellCount rect={preview.rect} clue={clues[preview.clue]} />}
+              {/* Like LinkedIn, the size shows from the first cell you drag over, clue or not. */}
+              <CellCount
+                rect={preview.rect}
+                clue={preview.clue >= 0 ? clues[preview.clue] : clues.find((k) => rectContains(preview.rect, k.r, k.c))}
+              />
             </div>
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
@@ -448,14 +452,14 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
  * LinkedIn shows each patch's cell count in a small box at its center. When the center lands on
  * the clue's own cell, nudge it half a cell along the patch's longer side so it doesn't cover the clue.
  */
-function CellCount({ rect, clue }: { rect: Rect; clue: Clue }) {
+function CellCount({ rect, clue }: { rect: Rect; clue?: Clue }) {
   const w = rect.c1 - rect.c0 + 1;
   const h = rect.r1 - rect.r0 + 1;
   let x = 50;
   let y = 50;
   const midC = rect.c0 + (w - 1) / 2;
   const midR = rect.r0 + (h - 1) / 2;
-  if (midC === clue.c && midR === clue.r) {
+  if (clue && midC === clue.c && midR === clue.r) {
     if (w >= h) x += (50 / w) * (clue.c < rect.c1 ? 1 : -1);
     else y += (50 / h) * (clue.r < rect.r1 ? 1 : -1);
   }
