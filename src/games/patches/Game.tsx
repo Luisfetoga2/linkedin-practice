@@ -108,15 +108,6 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     return r * n + c;
   };
 
-  /** More than half a cell outside the board. */
-  const releasedOffBoard = (x: number, y: number): boolean => {
-    const el = boardRef.current;
-    if (!el) return false;
-    const b = el.getBoundingClientRect();
-    const m = b.width / n / 2;
-    return x < b.left - m || x > b.right + m || y < b.top - m || y > b.bottom + m;
-  };
-
   // Escape cancels a drag; Cmd/Ctrl+Z undoes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -259,7 +250,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
       removeAt(d.start);
       return;
     }
-    if (releasedOffBoard(e.clientX, e.clientY)) return; // drag off the board to cancel
+    // Releasing off the board still draws: the drag is clamped to the edge cells, as in LinkedIn.
     if (!d.resize && rectArea(d.box) < 2) return; // blocked right away by a patch: nothing drawn
     const out = outcomeOf(d);
     if (out.kind !== 'place') {
