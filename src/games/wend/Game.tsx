@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Check, Eraser, Undo } from '../../core/components/Icons';
@@ -30,7 +30,12 @@ import {
   type Pt,
   type Stroke,
 } from './lines';
+import { EMPTY_LINE, lineFor, sameLine, stepLine, type LineState } from '../zip/lineAnim';
+import { lineChevronsD, linePathD, nearHead, shouldSnap, staticChevronsD, staticPathD, strokeTarget } from './lineDraw';
 import styles from './Game.module.css';
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 const COLOR_CLASSES = [styles.c0, styles.c1, styles.c2, styles.c3, styles.c4];
 const colorOf = (w: number) => COLOR_CLASSES[w % COLOR_CLASSES.length];
@@ -109,10 +114,112 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     linesRef.current = l;
     setLinesState(l);
   }, []);
-  const setStroke = useCallback((s: Stroke | null) => {
+
+  // ---------------------------------------------------------------------------
+  // Animated line. The "focus" line (the stroke being drawn, then the line it left behind) is drawn
+  // imperatively: its displayed state chases a target (committed cells + a live tip toward the
+  // pointer) in a requestAnimationFrame loop that only touches two SVG paths. Other lines are static.
+
+  /** The line the last stroke left behind (still drawn by the animated overlay). */
+  const [focusLine, setFocusState] = useState<Line | null>(null);
+  const focusRef = useRef<Line | null>(null);
+  /** Latest pointer sample during a drag, in board cell units. */
+  const pointerRef = useRef<Pt | null>(null);
+  /** The live tip re-arms once the pointer nears the head's centre, so entering a tile snaps to it. */
+  const tipArmedRef = useRef(false);
+  const displayRef = useRef<LineState>(EMPTY_LINE);
+  const targetRef = useRef<LineState>(EMPTY_LINE);
+  const rafRef = useRef(0);
+  const lastTsRef = useRef(-1);
+  const focusPathRef = useRef<SVGPathElement>(null);
+  const focusChevRef = useRef<SVGPathElement>(null);
+
+  const draw = (line: LineState) => {
+    const path = focusPathRef.current;
+    const chev = focusChevRef.current;
+    if (!path || !chev) return;
+    const d = linePathD(line, size);
+    const cd = lineChevronsD(line, size);
+    if (path.getAttribute('d') !== d) path.setAttribute('d', d);
+    if (chev.getAttribute('d') !== cd) chev.setAttribute('d', cd);
+  };
+  const drawRef = useRef(draw);
+  drawRef.current = draw;
+
+  const tickRef = useRef<(ts: number) => void>(() => {});
+  tickRef.current = (ts: number) => {
+    const dt = lastTsRef.current < 0 ? 16 : ts - lastTsRef.current;
+    lastTsRef.current = ts;
+    const next = stepLine(displayRef.current, targetRef.current, dt);
+    displayRef.current = next;
+    drawRef.current(next);
+    if (sameLine(next, targetRef.current)) rafRef.current = 0;
+    else rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+  };
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  /** Jump the displayed line (no animation). */
+  const showNow = (line: LineState) => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+    displayRef.current = line;
+    targetRef.current = line;
+    drawRef.current(line);
+  };
+
+  /** Recompute where the focus line should be and start animating toward it. */
+  const retarget = (snap = false) => {
+    const s = strokeRef.current;
+    const focus = s ? s.active : focusRef.current;
+    let t = focus ? lineFor(focus) : EMPTY_LINE;
+    const p = pointerRef.current;
+    if (s && dragRef.current && p && !inactive && !s.merge && s.active.length) {
+      if (nearHead(size, s.active[s.active.length - 1], p)) tipArmedRef.current = true;
+      if (tipArmedRef.current) t = strokeTarget(grid, s, p);
+    }
+    if (snap || prefersReducedMotion()) {
+      showNow(t);
+      return;
+    }
+    targetRef.current = t;
+    if (rafRef.current) return;
+    if (sameLine(displayRef.current, t)) {
+      drawRef.current(displayRef.current);
+      return;
+    }
+    lastTsRef.current = -1;
+    rafRef.current = requestAnimationFrame((ts) => tickRef.current(ts));
+  };
+
+  const setFocus = (l: Line | null) => {
+    focusRef.current = l;
+    setFocusState(l);
+  };
+
+  const setStroke = (s: Stroke | null) => {
+    const prev = strokeRef.current;
+    if (dragRef.current && s && prev && s.active.at(-1) !== prev.active.at(-1)) tipArmedRef.current = false;
     strokeRef.current = s;
     setStrokeState(s);
-  }, []);
+    retarget(shouldSnap(prev, s));
+  };
+
+  /**
+   * Start a stroke at tile c. The animated line starts from what's on screen there (the full line
+   * being continued, which then retracts to c), unless it is already the animated one.
+   */
+  const startStroke = (s: Stroke, c: number) => {
+    const prevLine = linesRef.current.find((l) => l.includes(c)) ?? null;
+    if (!prevLine || prevLine !== focusRef.current) showNow(lineFor(prevLine ?? s.active));
+    tipArmedRef.current = true;
+    setStroke(s);
+  };
+
+  /** Drop the animated overlay (undo / clear / hints / cancel redraw the board instantly). */
+  const dropFocus = () => {
+    setFocus(null);
+    showNow(EMPTY_LINE);
+  };
 
   const spell = (l: Line) => l.map((c) => letters[c]).join('');
 
@@ -187,6 +294,8 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
         if (t) final = stepStroke(grid, t, tapCell);
       }
     }
+    pointerRef.current = null;
+    setFocus(final.active);
     setStroke(null);
     const next = strokeLines(final);
     selectedRef.current = final.active[final.active.length - 1];
@@ -238,8 +347,9 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     }
     setCursor(null);
     setHint((h) => (h?.blocking.length ? null : h));
-    setStroke(s);
     dragRef.current = { id: e.pointerId, cur: c, last: p, moved: false };
+    pointerRef.current = p;
+    startStroke(s, c);
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -262,8 +372,10 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
         },
       });
       d.last = p;
+      pointerRef.current = p;
     }
     if (s !== strokeRef.current) setStroke(s);
+    else retarget();
   };
 
   const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -287,6 +399,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     dragRef.current = null;
     keyStrokeRef.current = false;
     setStroke(null);
+    dropFocus();
     setLines(history[history.length - 1]);
     setHistory((h) => h.slice(0, -1));
     selectedRef.current = null;
@@ -298,6 +411,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     dragRef.current = null;
     keyStrokeRef.current = false;
     setStroke(null);
+    dropFocus();
     setHint(null);
     selectedRef.current = null;
     if (linesRef.current.length) commit([]);
@@ -320,6 +434,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
       const len = hw.word.length;
       setRevealed(r.revealed);
       // Lay the revealed tiles down as a line (one undo step when the board changed).
+      dropFocus();
       commit(r.lines);
       selectedRef.current = r.lines[r.lines.length - 1].at(-1) ?? null;
       onHint();
@@ -362,7 +477,8 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
       if (!st) return;
       keyStrokeRef.current = true;
       setHint((h) => (h?.blocking.length ? null : h));
-      apply(st);
+      startStroke(st, c);
+      setCursor(headOf(st));
     };
     if (key in dirs) {
       e.preventDefault();
@@ -393,6 +509,7 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
       if (!s) return;
       keyStrokeRef.current = false;
       setStroke(null);
+      dropFocus();
       return;
     }
     const L = keyToTileLetter(key);
@@ -435,27 +552,9 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
   const lineOf = new Array<number>(n).fill(-1);
   shown.forEach((l, i) => l.forEach((c) => (lineOf[c] = i)));
 
-  const center = (c: number) => `${(c % size) + 0.5} ${Math.floor(c / size) + 0.5}`;
-  const pathD = (p: number[]) => `M ${center(p[0])} ` + (p.length === 1 ? 'l 0 0' : p.slice(1).map((c) => `L ${center(c)}`).join(' '));
-  /** One small ">" per segment, at its midpoint, pointing in reading direction. */
-  const chevronsD = (p: number[]) => {
-    const H = 0.06; // half depth along the segment
-    const W = 0.12; // half width across it (~24% of a tile overall)
-    const f = (v: number) => +v.toFixed(3);
-    let d = '';
-    for (let i = 1; i < p.length; i++) {
-      const [a, b] = [p[i - 1], p[i]];
-      const ax = (a % size) + 0.5;
-      const ay = Math.floor(a / size) + 0.5;
-      const dx = (b % size) - (a % size);
-      const dy = Math.floor(b / size) - Math.floor(a / size);
-      const mx = ax + dx / 2;
-      const my = ay + dy / 2;
-      // Back corners, tip, back corners: perpendicular is (-dy, dx).
-      d += `M ${f(mx - dx * H - dy * W)} ${f(my - dy * H + dx * W)} L ${f(mx + dx * H)} ${f(my + dy * H)} L ${f(mx - dx * H + dy * W)} ${f(my - dy * H - dx * W)} `;
-    }
-    return d.trim();
-  };
+  // The focus line (stroke being drawn, or the line it left) is drawn by the animated overlay.
+  const focus = stroke ? stroke.active : focusLine;
+  const focusIdx = focus ? shown.indexOf(focus) : -1;
 
   const blockingSet = new Set(hint?.blocking ?? []);
   // Revealed hint tiles: cell -> { w, k }
@@ -504,9 +603,13 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
     return `${styles.chevron} ${i === activeIdx ? styles.traceChevron : ''}`;
   };
   // Neutral lines underneath, found words above, the stroke on top.
-  const drawOrder = shown.map((_, i) => i).sort((a, b) => {
+  const drawOrder = shown.map((_, i) => i).filter((i) => i !== focusIdx).sort((a, b) => {
     const rank = (i: number) => (i === activeIdx ? 2 : assign[i] >= 0 ? 1 : 0);
     return rank(a) - rank(b);
+  });
+
+  useLayoutEffect(() => {
+    drawRef.current(displayRef.current);
   });
 
   const traceWord = stroke ? spell(stroke.active) : '';
@@ -550,10 +653,14 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, lexic
           <svg className={styles.lines} viewBox={`0 0 ${size} ${size}`} aria-hidden>
             {drawOrder.map((i) => (
               <g key={`${i}-${shown[i][0]}`}>
-                <path d={pathD(shown[i])} className={lineClass(i)} />
-                {shown[i].length > 1 && <path d={chevronsD(shown[i])} className={chevronClass(i)} />}
+                <path d={staticPathD(shown[i], size)} className={lineClass(i)} />
+                {shown[i].length > 1 && <path d={staticChevronsD(shown[i], size)} className={chevronClass(i)} />}
               </g>
             ))}
+            <g style={focusIdx < 0 ? { display: 'none' } : undefined}>
+              <path ref={focusPathRef} className={focusIdx >= 0 ? lineClass(focusIdx) : styles.line} />
+              <path ref={focusChevRef} className={focusIdx >= 0 ? chevronClass(focusIdx) : styles.chevron} />
+            </g>
           </svg>
 
           <div className={`${styles.layer} ${styles.letters}`}>
