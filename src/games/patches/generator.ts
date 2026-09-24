@@ -26,17 +26,19 @@ export interface PatchesPuzzle {
   solution: Rect[];
 }
 
+/** LinkedIn-like clue colours; all dark enough for a white number. `INK` is swapped for a lighter grey in dark mode. */
+export const INK = '#1f1f1f';
 export const PALETTE = [
-  '#f54545', // red
-  '#4a8bf5', // blue
-  '#ffc93c', // yellow
-  '#34b36b', // green
-  '#9b6cf0', // purple
-  '#ff8a3d', // orange
-  '#f06bb0', // pink
-  '#22b8c7', // teal
-  '#8bc34a', // lime
-  '#7a6ff0', // indigo
+  '#c4952b', // gold
+  '#e0534a', // coral red
+  '#4ea55a', // green
+  '#3f95a6', // teal
+  '#3d9ef0', // sky blue
+  INK, // charcoal
+  '#8a63d2', // purple
+  '#e8812c', // orange
+  '#d45a9b', // pink
+  '#5078e0', // royal blue
 ];
 
 export const rectW = (r: Rect) => r.c1 - r.c0 + 1;

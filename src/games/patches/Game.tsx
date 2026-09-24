@@ -4,25 +4,26 @@ import type { GameProps } from '../../core/types';
 import { ControlBar, ControlButton, HintBubble } from '../../core/components/Controls';
 import { Bulb, Eraser, Undo } from '../../core/components/Icons';
 import { toast } from '../../core/components/Toast';
-import { fitsClue, generatePatches, logicSolve, rectContains, rectsOverlap, sameRect, type Clue, type Rect } from './generator';
-import { patchAt, resolveNew, resolveResize, type DrawOutcome, type Patches } from './draw';
+import { fitsClue, generatePatches, INK, logicSolve, rectArea, rectContains, rectsOverlap, sameRect, type Clue, type Rect } from './generator';
+import { clampGrow, fitProblem, patchAt, resizeRect, resolveNew, resolveResize, type DrawOutcome, type FitProblem, type Patches } from './draw';
 import { STR } from './i18n';
 import styles from './Game.module.css';
 
 
-function normRect(a: number, b: number, n: number): Rect {
-  const ar = Math.floor(a / n);
-  const ac = a % n;
-  const br = Math.floor(b / n);
-  const bc = b % n;
-  return { r0: Math.min(ar, br), c0: Math.min(ac, bc), r1: Math.max(ar, br), c1: Math.max(ac, bc) };
+function cellBox(cell: number, n: number): Rect {
+  const r = Math.floor(cell / n);
+  const c = cell % n;
+  return { r0: r, c0: c, r1: r, c1: c };
 }
 
-/** Grow a rectangle so it also covers `cell` (LinkedIn: every cell you drag through joins the patch). */
-function extendRect(r: Rect, cell: number, n: number): Rect {
-  const cr = Math.floor(cell / n);
-  const cc = cell % n;
-  return { r0: Math.min(r.r0, cr), c0: Math.min(r.c0, cc), r1: Math.max(r.r1, cr), c1: Math.max(r.c1, cc) };
+/** Clue colour as CSS (the charcoal clue turns light grey in dark mode). */
+const cssColor = (color: string) => (color === INK ? 'var(--pa-ink)' : color);
+
+/** A patch that can never satisfy its clue (LinkedIn: it blinks red and an "Oops!" card explains why). */
+interface OopsState {
+  clue: number;
+  rect: Rect;
+  problem: FitProblem;
 }
 
 function rectStyle(r: Rect, n: number): CSSProperties {
@@ -50,6 +51,12 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   const [flash, setFlash] = useState<number | null>(null);
   const [fresh, setFresh] = useState<number | null>(null);
   const [won, setWon] = useState(false);
+  const [oops, setOopsState] = useState<OopsState | null>(null);
+  const oopsRef = useRef<OopsState | null>(null);
+  const setOops = (o: OopsState | null) => {
+    oopsRef.current = o;
+    setOopsState(o);
+  };
   const boardRef = useRef<HTMLDivElement>(null);
   /** `resize` = the drag started on patch `clue` (LinkedIn resize); otherwise a new rectangle. */
   const drag = useRef<{
@@ -81,7 +88,8 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   }, []);
 
   const commit = (next: Patches) => {
-    setHistory((h) => [...h, patchesRef.current]);
+    const prev = patchesRef.current; // read now: the updater below may run after setPatches
+    setHistory((h) => [...h, prev]);
     setPatches(next);
   };
 
@@ -113,6 +121,10 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (document.querySelector('.lp-modal-backdrop')) return;
+      if (e.key === 'Escape' && oopsRef.current) {
+        dismissOopsRef.current();
+        return;
+      }
       if (e.key === 'Escape' && drag.current) {
         cancelDrag();
         return;
@@ -127,17 +139,32 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   }, []);
 
   const outcomeOf = (d: NonNullable<typeof drag.current>): DrawOutcome =>
-    d.resize ? resolveResize(clues, d.resize.base, d.resize.clue, d.cur, n) : resolveNew(clues, d.box);
+    d.resize
+      ? resolveResize(clues, d.resize.base, d.resize.clue, d.cur, n, patchesRef.current)
+      : resolveNew(clues, d.box);
 
-  /** Shows what releasing would produce; a resized patch shows its new size in its own color. */
+  /** Shows what releasing would produce: a new box is a grey dashed outline; a resized patch keeps its colour. */
   const updatePreview = (d: NonNullable<typeof drag.current>) => {
     const out = outcomeOf(d);
-    if (out.kind === 'place') setPreview({ rect: out.rect, clue: out.clue, bad: false });
-    else if (d.resize) setPreview({ rect: extendTo(d.resize.base, d.cur), clue: d.resize.clue, bad: true });
-    else setPreview({ rect: d.box, clue: -1, bad: out.kind === 'multi' });
+    if (d.resize) {
+      if (out.kind === 'place') setPreview({ rect: out.rect, clue: out.clue, bad: false });
+      else setPreview({ rect: resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current), clue: d.resize.clue, bad: true });
+    } else setPreview({ rect: d.box, clue: -1, bad: out.kind === 'multi' });
   };
 
-  const extendTo = (base: Rect, cell: number): Rect => extendRect(base, cell, n);
+  /** Closes the "Oops!" card and deletes the bad patch (a resized patch disappears: one undo step). */
+  const dismissOops = () => {
+    const o = oopsRef.current;
+    if (!o) return;
+    setOops(null);
+    if (patchesRef.current[o.clue]) {
+      const next = patchesRef.current.slice();
+      next[o.clue] = null;
+      commit(next);
+    }
+  };
+  const dismissOopsRef = useRef(dismissOops);
+  dismissOopsRef.current = dismissOops;
 
   const cancelDrag = () => {
     drag.current = null;
@@ -157,6 +184,12 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (locked) return;
+    if (oopsRef.current) {
+      // Any tap on the board first clears the error (and does nothing else).
+      e.preventDefault();
+      if (!drag.current) dismissOops();
+      return;
+    }
     if (e.pointerType === 'mouse' && e.button === 2) {
       // Right-click: cancel the drag in progress, or remove the patch under the cursor.
       e.preventDefault();
@@ -174,7 +207,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     e.preventDefault();
     setHint(null);
     setFlash(null);
-    const box = normRect(cell, cell, n);
+    const box = cellBox(cell, n);
     const on = patchAt(patchesRef.current, cell, n);
     const d = {
       pointerId: e.pointerId,
@@ -201,7 +234,8 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (cell === d.cur) return;
     d.cur = cell;
     d.moved = true;
-    d.box = extendRect(d.box, cell, n);
+    // Every cell you drag through joins the box, but it never grows over a drawn patch (LinkedIn).
+    if (!d.resize) d.box = clampGrow(d.box, cell, n, patchesRef.current);
     if (d.resize) setResizing(d.resize.clue);
     updatePreview(d);
   };
@@ -226,15 +260,21 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
       return;
     }
     if (releasedOffBoard(e.clientX, e.clientY)) return; // drag off the board to cancel
+    if (!d.resize && rectArea(d.box) < 2) return; // blocked right away by a patch: nothing drawn
     const out = outcomeOf(d);
     if (out.kind !== 'place') {
-      const rect = d.resize ? extendTo(d.resize.base, d.cur) : d.box;
+      const rect = d.resize ? resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current) : d.box;
       setShake(rect);
       later(() => setShake(null), 450);
       toast(out.kind === 'none' ? t.needsOneClue : t.onlyOneClue);
       return;
     }
     if (d.resize && sameRect(out.rect, d.resize.base)) return; // dragged back inside: no change
+    const problem = fitProblem(out.rect, clues[out.clue], n);
+    if (problem) {
+      setOops({ clue: out.clue, rect: out.rect, problem });
+      return;
+    }
     place(out.rect, out.clue);
   };
 
@@ -243,6 +283,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (!d || d.pointerId !== e.pointerId) return;
     drag.current = null;
     setPreview(null);
+    setResizing(null);
   };
 
   // Win check.
@@ -262,7 +303,13 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   }, [patches, clues, n, onComplete]);
 
   const undo = () => {
-    if (locked || !history.length) return;
+    if (locked) return;
+    if (oopsRef.current) {
+      // The bad patch was never committed: undoing it restores the board as it was before the drag.
+      setOops(null);
+      return;
+    }
+    if (!history.length) return;
     setHint(null);
     setFlash(null);
     setPatches(history[history.length - 1]);
@@ -272,7 +319,9 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
   undoRef.current = undo;
 
   const clear = () => {
-    if (locked || patchesRef.current.every((p) => !p)) return;
+    if (locked) return;
+    setOops(null);
+    if (patchesRef.current.every((p) => !p)) return;
     setHint(null);
     setFlash(null);
     commit(clues.map(() => null));
@@ -280,6 +329,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
 
   const giveHint = () => {
     if (locked) return;
+    dismissOops();
     const cur = patchesRef.current;
     onHint();
     const wrong = cur.findIndex((p, i) => p && !sameRect(p, solution[i]));
@@ -302,13 +352,19 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     setHint({ text: t.reason[pick.reason] });
   };
 
-  const tint = (color: string): CSSProperties => ({ ['--pc' as string]: color }) as CSSProperties;
+  /** Patch colour; the charcoal clue gets a lighter tint so its patch doesn't read as a dark block. */
+  const tint = (color: string): CSSProperties =>
+    ({ ['--pc' as string]: cssColor(color), ...(color === INK ? { ['--patch-mix' as string]: 'var(--pa-ink-mix)' } : {}) }) as CSSProperties;
 
   const cells = [];
-  for (let i = 0; i < n * n; i++) cells.push(<div key={i} className={styles.cell} />);
+  for (let i = 0; i < n * n; i++) {
+    const cls = [styles.cell, i % n < n - 1 ? styles.vLine : '', i < n * (n - 1) ? styles.hLine : ''].join(' ');
+    cells.push(<div key={i} className={cls} />);
+  }
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.boardWrap}>
       <div
         ref={boardRef}
         className={`${styles.board}${won ? ` ${styles.won}` : ''}`}
@@ -324,11 +380,9 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
         <div className={styles.grid}>{cells}</div>
         <div className={styles.layer}>
           {patches.map((p, i) => {
-            if (!p || i === resizing) return null;
-            const ok = fitsClue(p, clues[i]);
+            if (!p || i === resizing || i === oops?.clue) return null;
             const cls = [
               styles.patch,
-              ok ? '' : styles.invalid,
               flash === i ? styles.flash : '',
               fresh === i ? styles.fresh : '',
             ].join(' ');
@@ -343,6 +397,12 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
               </div>
             );
           })}
+          {oops && (
+            <div key={`oops-${oops.rect.r0}-${oops.rect.c0}-${oops.rect.r1}-${oops.rect.c1}`} className={`${styles.patch} ${styles.oopsPatch}`} style={{ ...rectStyle(oops.rect, n), ...tint(clues[oops.clue].color) }}>
+              <div className={styles.patchInner} />
+              <CellCount rect={oops.rect} clue={clues[oops.clue]} />
+            </div>
+          )}
           {preview && (
             <div
               className={`${styles.preview}${preview.bad ? ` ${styles.previewBad}` : ''}`}
@@ -353,15 +413,32 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
           )}
           {shake && <div className={`${styles.preview} ${styles.previewBad} ${styles.shake}`} style={rectStyle(shake, n)} />}
           {clues.map((k, i) => (
-            <ClueBadge key={i} clue={k} n={n} label={t.clueLabel(k.size ?? null, k.shape)} />
+            <ClueBadge
+              key={i}
+              clue={k}
+              n={n}
+              filled={!!patches[i] || oops?.clue === i}
+              label={t.clueLabel(k.size ?? null, k.shape)}
+            />
           ))}
         </div>
       </div>
+      {oops && (
+        <OopsCard
+          oops={oops}
+          clue={clues[oops.clue]}
+          n={n}
+          text={t.oops[oops.problem](clues[oops.clue].size ?? 0)}
+          closeLabel={t.dismissOops}
+          onDismiss={dismissOops}
+        />
+      )}
+      </div>
       {hint && <HintBubble onDismiss={() => setHint(null)}>{hint.text}</HintBubble>}
       <ControlBar>
-        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || history.length === 0} />
+        <ControlButton icon={<Undo size={18} />} label={t.undo} onClick={undo} disabled={locked || (history.length === 0 && !oops)} />
         <ControlButton icon={<Bulb size={18} />} label={t.hint} onClick={giveHint} disabled={locked} />
-        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || patches.every((p) => !p)} />
+        <ControlButton icon={<Eraser size={18} />} label={t.clear} onClick={clear} disabled={locked || (patches.every((p) => !p) && !oops)} />
       </ControlBar>
     </div>
   );
@@ -389,19 +466,72 @@ function CellCount({ rect, clue }: { rect: Rect; clue: Clue }) {
   );
 }
 
-function ClueBadge({ clue, n, label }: { clue: Clue; n: number; label: string }) {
-  const shapeCls = clue.shape === 'wide' ? styles.bWide : clue.shape === 'tall' ? styles.bTall : styles.bSquare;
+/**
+ * LinkedIn's "Oops!" card. Clicking anywhere on it (or its ✕) closes it and deletes the bad patch.
+ * It sits just below the clue (above it near the bottom edge), aligned with the patch's left side.
+ */
+function OopsCard({
+  oops,
+  clue,
+  n,
+  text,
+  closeLabel,
+  onDismiss,
+}: {
+  oops: OopsState;
+  clue: Clue;
+  n: number;
+  text: string;
+  closeLabel: string;
+  onDismiss(): void;
+}) {
+  const u = 100 / n;
+  const width = 68;
+  const left = Math.min(100 - width - 2, Math.max(2, oops.rect.c0 * u + 1.5));
+  const below = clue.r < n - 2;
+  const pos: CSSProperties = below ? { top: `${(clue.r + 0.9) * u}%` } : { bottom: `${(n - clue.r - 0.1) * u}%` };
+  return (
+    <div
+      className={styles.oops}
+      style={{ ...pos, left: `${left}%`, width: `${width}%` }}
+      role="alert"
+      onClick={onDismiss}
+    >
+      <p>{text}</p>
+      <button type="button" className={styles.oopsClose} aria-label={closeLabel}>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/** Plus shape (a wide and a tall rounded rectangle) for "any shape" clues, in a 100×100 box. */
+const PLUS_PATH = (() => {
+  const a = 17; // arm inset
+  const r = 7; // outer corner radius
+  const b = 100 - a;
+  return [
+    `M${a + r},0 H${b - r} Q${b},0 ${b},${r} V${a} H${100 - r} Q100,${a} 100,${a + r}`,
+    `V${b - r} Q100,${b} ${100 - r},${b} H${b} V${100 - r} Q${b},100 ${b - r},100`,
+    `H${a + r} Q${a},100 ${a},${100 - r} V${b} H${r} Q0,${b} 0,${b - r}`,
+    `V${a + r} Q0,${a} ${r},${a} H${a} V${r} Q${a},0 ${a + r},0 Z`,
+  ].join(' ');
+})();
+
+function ClueBadge({ clue, n, filled, label }: { clue: Clue; n: number; filled: boolean; label: string }) {
+  const shapeCls = { wide: styles.bWide, tall: styles.bTall, square: styles.bSquare, any: styles.bAny }[clue.shape];
+  const cls = [styles.badge, shapeCls, filled ? styles.bFilled : '', clue.size != null && clue.size >= 10 ? styles.twoDigits : ''].join(' ');
   return (
     <div className={styles.clueCell} style={rectStyle({ r0: clue.r, c0: clue.c, r1: clue.r, c1: clue.c }, n)} aria-label={label}>
-      <div className={`${styles.badge} ${shapeCls}${clue.shape === 'any' ? ` ${styles.bAny}` : ''}`} style={{ ['--pc' as string]: clue.color } as CSSProperties}>
-        {clue.size != null ? (
-          <span>{clue.size}</span>
-        ) : clue.shape === 'any' ? (
-          <svg className={styles.anyIcon} viewBox="0 0 24 24" aria-hidden>
-            <rect x="2.5" y="3" width="7.5" height="18" rx="1.8" />
-            <rect x="12.5" y="8" width="9" height="8" rx="1.8" />
+      <div className={cls} style={{ ['--pc' as string]: cssColor(clue.color) } as CSSProperties}>
+        {clue.shape === 'any' && (
+          <svg className={styles.plus} viewBox="0 0 100 100" aria-hidden>
+            <path d={PLUS_PATH} />
           </svg>
-        ) : null}
+        )}
+        {clue.size != null && <span>{clue.size}</span>}
       </div>
     </div>
   );

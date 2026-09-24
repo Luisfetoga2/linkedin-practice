@@ -5,22 +5,37 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  --patch-mix: 24%;
+  --patch-mix: 22%;
+  /* LinkedIn look: soft grey frame, dashed grid, charcoal clue ink. */
+  --pa-frame: #e3e3e3;
+  --pa-grid: #c4c4c4;
+  --pa-ink: #1f1f1f;
+  --pa-ink-mix: 11%;
+  --pa-preview: #4d4d4d;
+  --pa-preview-bg: rgba(0, 0, 0, 0.06);
+  --pa-oops: #d7848b;
+  --pa-oops-bg: #f9e4e6;
+  --pa-oops-stripe: rgba(215, 132, 139, 0.3);
+}
+
+.boardWrap {
+  position: relative;
 }
 
 .board {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--cell-bg);
-  box-shadow: 0 0 0 2px var(--board-frame);
+  box-shadow: 0 0 0 2px var(--pa-frame);
   overflow: hidden;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   cursor: crosshair;
   container-type: inline-size;
+  --cell: calc(100cqw / var(--n));
 }
 
 .grid {
@@ -32,7 +47,13 @@
 }
 
 .cell {
-  box-shadow: inset -0.5px -0.5px 0 0.5px var(--grid-line);
+  box-sizing: border-box;
+}
+.vLine {
+  border-right: 1px dashed var(--pa-grid);
+}
+.hLine {
+  border-bottom: 1px dashed var(--pa-grid);
 }
 
 .layer {
@@ -44,87 +65,137 @@
 /* ---------- Patches ---------- */
 .patch {
   position: absolute;
-  padding: 3px;
+  padding: calc(var(--cell) * 0.045);
   animation: popIn 0.22s cubic-bezier(0.2, 1.3, 0.4, 1);
 }
 .patchInner {
   width: 100%;
   height: 100%;
-  border-radius: 9px;
+  box-sizing: border-box;
+  border-radius: calc(var(--cell) * 0.11);
   background: color-mix(in srgb, var(--pc) var(--patch-mix), var(--cell-bg));
-  box-shadow: inset 0 0 0 2px var(--pc);
-}
-.invalid .patchInner {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--pc) calc(var(--patch-mix) * 0.6), var(--cell-bg));
-  outline: 2px dashed var(--pc);
-  outline-offset: -2px;
-}
-.invalid::after {
-  content: '!';
-  position: absolute;
-  top: 7px;
-  right: 9px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 800;
-  color: #fff;
-  background: var(--error-text);
+  border: 2px solid var(--pc);
 }
 .flash .patchInner {
   animation: flash 0.8s ease-in-out 3;
 }
 
+/* Over-area / impossible patch: red stripes, blinking, until the "Oops!" card is dismissed. */
+.oopsPatch {
+  animation: none;
+}
+.oopsPatch .patchInner {
+  border: 3px solid var(--pa-oops);
+  background:
+    repeating-linear-gradient(135deg, var(--pa-oops-stripe) 0 3px, transparent 3px 17px),
+    var(--pa-oops-bg);
+  animation: oopsBlink 0.45s ease-in-out 3;
+}
+
 .preview {
   position: absolute;
-  padding: 3px;
+  padding: calc(var(--cell) * 0.045);
 }
 .preview::before {
   content: '';
   position: absolute;
-  inset: 3px;
-  border-radius: 9px;
-  border: 2px dashed var(--pc, var(--text-2));
-  background: color-mix(in srgb, var(--pc, var(--text-3)) 12%, transparent);
+  inset: calc(var(--cell) * 0.045);
+  border-radius: calc(var(--cell) * 0.11);
+  border: 2.5px dashed var(--pa-preview);
+  background: var(--pa-preview-bg);
 }
+/* A patch being resized keeps its own colour. */
+.preview[style*='--pc']::before {
+  border: 2px solid var(--pc);
+  background: color-mix(in srgb, var(--pc) var(--patch-mix), var(--cell-bg));
+}
+.previewBad::before,
+.preview.previewBad[style*='--pc']::before {
+  border: 2px dashed var(--error-text);
+  background: var(--error-stripe);
+}
+.shake {
+  animation: shake 0.4s ease-in-out;
+}
+
 /* Small cell count at the center of each patch (LinkedIn style). */
 .count {
   position: absolute;
   z-index: 1;
   transform: translate(-50%, -50%);
-  min-width: 17px;
-  height: 17px;
+  box-sizing: border-box;
+  min-width: clamp(16px, calc(var(--cell) * 0.22), 22px);
+  height: clamp(16px, calc(var(--cell) * 0.22), 22px);
   padding: 0 3px;
   display: grid;
   place-items: center;
   border-radius: 4px;
   border: 1.5px solid var(--pc);
-  background: color-mix(in srgb, var(--pc) 10%, var(--cell-bg));
-  color: color-mix(in srgb, var(--pc) 80%, #000);
-  font-size: 10px;
+  background: var(--cell-bg);
+  color: var(--pc);
+  font-size: clamp(10px, calc(var(--cell) * 0.14), 13px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
-:global(:root[data-theme='dark']) .count {
-  color: color-mix(in srgb, var(--pc) 70%, #fff);
+.oopsPatch .count {
+  border-color: var(--pc);
 }
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme='light'])) .count {
-    color: color-mix(in srgb, var(--pc) 70%, #fff);
+
+/* ---------- "Oops!" card ---------- */
+.oops {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 12px 14px 18px;
+  border-radius: 10px;
+  border: 2px solid var(--pa-oops);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  animation: oopsIn 0.18s ease-out;
+}
+.oops p {
+  margin: 0;
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.oopsClose {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -3px -2px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.oopsClose svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.oopsClose:hover {
+  background: var(--surface-2);
+}
+@media (max-width: 480px) {
+  .oops {
+    padding: 11px 8px 11px 13px;
   }
-}
-.previewBad::before {
-  border-color: var(--error-text);
-  background: var(--error-stripe);
-}
-.shake {
-  animation: shake 0.4s ease-in-out;
+  .oops p {
+    font-size: 14px;
+  }
 }
 
 /* ---------- Clue badges ---------- */
@@ -134,42 +205,63 @@
   place-items: center;
 }
 .badge {
+  position: relative;
   display: grid;
   place-items: center;
   background: var(--pc);
   color: #fff;
-  border-radius: 6px;
+  border-radius: calc(var(--cell) * 0.07);
   font-weight: 700;
-  font-size: calc(100cqw / var(--n) * 0.34);
+  font-size: calc(var(--cell) * 0.4);
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16);
+}
+.badge span {
+  position: relative;
+}
+.twoDigits {
+  font-size: calc(var(--cell) * 0.33);
+  letter-spacing: -0.02em;
 }
 .bSquare {
-  width: 56%;
-  height: 56%;
+  width: 58%;
+  height: 58%;
 }
 .bWide {
-  width: 70%;
-  height: 44%;
+  width: 74%;
+  height: 50%;
 }
 .bTall {
-  width: 44%;
-  height: 70%;
+  width: 50%;
+  height: 74%;
 }
+/* Any shape: a plus (wide + tall), lighter with a dashed outline; solid once its patch is drawn. */
 .bAny {
-  background: color-mix(in srgb, var(--pc) 16%, var(--cell-bg));
-  color: color-mix(in srgb, var(--pc) 78%, #000);
-  outline: 2px dashed var(--pc);
-  outline-offset: -2px;
+  width: 74%;
+  height: 74%;
+  background: none;
+  box-shadow: none;
 }
-/* Joker (any size, any shape): outline says "square", the icon adds wide + tall. */
-.anyIcon {
-  width: 70%;
-  height: 70%;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.2;
-  stroke-linejoin: round;
+.plus {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.plus path {
+  fill: color-mix(in srgb, var(--pc) 55%, transparent);
+  stroke: var(--pc);
+  stroke-width: 1.4px;
+  stroke-dasharray: 3.5 2.5;
+  vector-effect: non-scaling-stroke;
+}
+.bFilled .plus path {
+  fill: var(--pc);
+  stroke-dasharray: none;
+}
+.bFilled.bAny {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.16));
 }
 
 /* ---------- Win ---------- */
@@ -201,10 +293,10 @@
 @keyframes flash {
   0%,
   100% {
-    box-shadow: inset 0 0 0 2px var(--pc);
+    box-shadow: none;
   }
   50% {
-    box-shadow: inset 0 0 0 5px var(--pc), 0 0 0 3px color-mix(in srgb, var(--pc) 40%, transparent);
+    box-shadow: inset 0 0 0 3px var(--pc), 0 0 0 3px color-mix(in srgb, var(--pc) 40%, transparent);
   }
 }
 @keyframes shake {
@@ -226,17 +318,49 @@
   }
 }
 
-:global(:root[data-theme='dark']) .wrap {
-  --patch-mix: 34%;
+@keyframes oopsBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
-:global(:root[data-theme='dark']) .bAny {
-  color: color-mix(in srgb, var(--pc) 70%, #fff);
+@keyframes oopsIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:global(:root[data-theme='dark']) .wrap {
+  --patch-mix: 30%;
+  --pa-frame: #3d4248;
+  --pa-grid: #555b62;
+  --pa-ink: #7c848e;
+  --pa-ink-mix: 30%;
+  --pa-preview: #b9bec4;
+  --pa-preview-bg: rgba(255, 255, 255, 0.07);
+  --pa-oops: #e0707a;
+  --pa-oops-bg: #4a2a2e;
+  --pa-oops-stripe: rgba(224, 112, 122, 0.3);
 }
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme='light'])) .wrap {
-    --patch-mix: 34%;
-  }
-  :global(:root:not([data-theme='light'])) .bAny {
-    color: color-mix(in srgb, var(--pc) 70%, #fff);
+    --patch-mix: 30%;
+    --pa-frame: #3d4248;
+    --pa-grid: #555b62;
+    --pa-ink: #7c848e;
+  --pa-ink-mix: 30%;
+    --pa-preview: #b9bec4;
+    --pa-preview-bg: rgba(255, 255, 255, 0.07);
+    --pa-oops: #e0707a;
+    --pa-oops-bg: #4a2a2e;
+    --pa-oops-stripe: rgba(224, 112, 122, 0.3);
   }
 }
