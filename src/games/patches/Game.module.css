@@ -235,7 +235,7 @@
   width: 50%;
   height: 74%;
 }
-/* Any shape: a plus (wide + tall), lighter with a dashed outline; solid once its patch is drawn. */
+/* Any shape: a wide and a tall bar crossing, translucent with dashed edges; solid once its patch is drawn. */
 .bAny {
   width: 74%;
   height: 74%;
@@ -249,16 +249,17 @@
   height: 100%;
   overflow: visible;
 }
-.plus path {
-  fill: color-mix(in srgb, var(--pc) 55%, transparent);
+.plus rect {
+  /* Each bar is translucent, so where they cross the fill doubles up, and each keeps its own dashed edge. */
+  fill: color-mix(in srgb, var(--pc) 38%, transparent);
   stroke: var(--pc);
   stroke-width: 1.4px;
   stroke-dasharray: 3.5 2.5;
   vector-effect: non-scaling-stroke;
 }
-.bFilled .plus path {
+.bFilled .plus rect {
   fill: var(--pc);
-  stroke-dasharray: none;
+  stroke: none;
 }
 .bFilled.bAny {
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.16));

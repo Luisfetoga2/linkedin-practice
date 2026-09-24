@@ -507,18 +507,9 @@ function OopsCard({
   );
 }
 
-/** Plus shape (a wide and a tall rounded rectangle) for "any shape" clues, in a 100×100 box. */
-const PLUS_PATH = (() => {
-  const a = 17; // arm inset
-  const r = 7; // outer corner radius
-  const b = 100 - a;
-  return [
-    `M${a + r},0 H${b - r} Q${b},0 ${b},${r} V${a} H${100 - r} Q100,${a} 100,${a + r}`,
-    `V${b - r} Q100,${b} ${100 - r},${b} H${b} V${100 - r} Q${b},100 ${b - r},100`,
-    `H${a + r} Q${a},100 ${a},${100 - r} V${b} H${r} Q0,${b} 0,${b - r}`,
-    `V${a + r} Q0,${a} ${r},${a} H${a} V${r} Q${a},0 ${a + r},0 Z`,
-  ].join(' ');
-})();
+/** "Any shape" icon, as in LinkedIn: a wide and a tall rounded rectangle crossing (100×100 box). */
+const ARM = 17; // how far the crossing bar is inset from the edges
+const BAR_RADIUS = 8;
 
 function ClueBadge({ clue, n, filled, label }: { clue: Clue; n: number; filled: boolean; label: string }) {
   const shapeCls = { wide: styles.bWide, tall: styles.bTall, square: styles.bSquare, any: styles.bAny }[clue.shape];
@@ -528,7 +519,8 @@ function ClueBadge({ clue, n, filled, label }: { clue: Clue; n: number; filled: 
       <div className={cls} style={{ ['--pc' as string]: cssColor(clue.color) } as CSSProperties}>
         {clue.shape === 'any' && (
           <svg className={styles.plus} viewBox="0 0 100 100" aria-hidden>
-            <path d={PLUS_PATH} />
+            <rect x="0" y={ARM} width="100" height={100 - 2 * ARM} rx={BAR_RADIUS} />
+            <rect x={ARM} y="0" width={100 - 2 * ARM} height="100" rx={BAR_RADIUS} />
           </svg>
         )}
         {clue.size != null && <span>{clue.size}</span>}
