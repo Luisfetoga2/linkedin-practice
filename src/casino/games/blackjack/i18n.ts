@@ -1,0 +1,93 @@
+import { defineStrings } from '../../../lib/i18n';
+import type { Rank, Suit } from './logic';
+
+const RANK_EN: Partial<Record<Rank, string>> = { A: 'Ace', J: 'Jack', Q: 'Queen', K: 'King' };
+const SUIT_EN: Record<Suit, string> = { s: 'spades', h: 'hearts', d: 'diamonds', c: 'clubs' };
+const RANK_ES: Partial<Record<Rank, string>> = { A: 'As', J: 'Jota', Q: 'Reina', K: 'Rey' };
+const SUIT_ES: Record<Suit, string> = { s: 'picas', h: 'corazones', d: 'diamantes', c: 'tréboles' };
+
+export const STR = defineStrings(
+  {
+    dealer: 'Dealer',
+    you: 'You',
+    handN: (n: number) => `Hand ${n}`,
+    hit: 'Hit',
+    stand: 'Stand',
+    double: 'Double',
+    split: 'Split',
+    deal: 'Deal',
+    keys: 'Keys: H hit · S stand · D double · P split · Enter deal',
+    shuffling: 'Shuffling…',
+    placeBet: 'Place your bet and deal',
+    paysRule: 'Blackjack pays 3 to 2',
+    dealerRule: 'Dealer stands on all 17s',
+    blackjack: 'Blackjack',
+    bust: 'Bust',
+    tag: { blackjack: 'Blackjack', win: 'Win', push: 'Push', lose: 'Lose', bust: 'Bust' },
+    // Result banner details
+    bjPays: 'Blackjack pays 3:2',
+    dealerBJ: 'Dealer has blackjack',
+    bothBJ: 'You both have blackjack',
+    dealerBusts: (n: number) => `Dealer busts with ${n}`,
+    dealerHas: (n: number) => `Dealer has ${n}`,
+    youBust: (n: number) => `You bust with ${n}`,
+    // History notes
+    noteWin: (p: number, d: number) => `Win ${p} vs ${d}`,
+    noteWinBust: (p: number) => `Win ${p}, dealer busts`,
+    noteLose: (p: number, d: number) => `Lose ${p} vs ${d}`,
+    noteBust: 'Bust',
+    notePush: (p: number) => `Push ${p}`,
+    noteDealerBJ: 'Dealer blackjack',
+    noteBothBJ: 'Push, both blackjack',
+    noteDouble: (rest: string) => `Double: ${rest}`,
+    noteSplit: (parts: string) => `Split: ${parts}`,
+    splitWord: { blackjack: 'win', win: 'win', push: 'push', lose: 'lose', bust: 'bust' },
+    // Screen readers
+    cardName: (r: Rank, s: Suit) => `${RANK_EN[r] ?? r} of ${SUIT_EN[s]}`,
+    faceDown: 'Face-down card',
+    handLabel: (who: string, total: string) => `${who}: ${total}`,
+    betOnHand: (amount: string) => `Bet ${amount}`,
+    playing: 'Your turn',
+  },
+  {
+    dealer: 'Crupier',
+    you: 'Tú',
+    handN: (n: number) => `Mano ${n}`,
+    hit: 'Pedir',
+    stand: 'Plantarse',
+    double: 'Doblar',
+    split: 'Dividir',
+    deal: 'Repartir',
+    keys: 'Teclas: H pedir · S plantarse · D doblar · P dividir · Enter repartir',
+    shuffling: 'Mezclando…',
+    placeBet: 'Haz tu apuesta y reparte',
+    paysRule: 'El blackjack paga 3 a 2',
+    dealerRule: 'El crupier se planta con cualquier 17',
+    blackjack: 'Blackjack',
+    bust: 'Te pasaste',
+    tag: { blackjack: 'Blackjack', win: 'Ganas', push: 'Empate', lose: 'Pierdes', bust: 'Te pasaste' },
+    bjPays: 'El blackjack paga 3:2',
+    dealerBJ: 'El crupier tiene blackjack',
+    bothBJ: 'Los dos tienen blackjack',
+    dealerBusts: (n: number) => `El crupier se pasa con ${n}`,
+    dealerHas: (n: number) => `El crupier tiene ${n}`,
+    youBust: (n: number) => `Te pasaste con ${n}`,
+    noteWin: (p: number, d: number) => `Gana ${p} contra ${d}`,
+    noteWinBust: (p: number) => `Gana ${p}, el crupier se pasa`,
+    noteLose: (p: number, d: number) => `Pierde ${p} contra ${d}`,
+    noteBust: 'Se pasó',
+    notePush: (p: number) => `Empate ${p}`,
+    noteDealerBJ: 'Blackjack del crupier',
+    noteBothBJ: 'Empate, ambos con blackjack',
+    noteDouble: (rest: string) => `Doble: ${rest}`,
+    noteSplit: (parts: string) => `División: ${parts}`,
+    splitWord: { blackjack: 'gana', win: 'gana', push: 'empate', lose: 'pierde', bust: 'se pasó' },
+    cardName: (r: Rank, s: Suit) => `${RANK_ES[r] ?? r} de ${SUIT_ES[s]}`,
+    faceDown: 'Carta boca abajo',
+    handLabel: (who: string, total: string) => `${who}: ${total}`,
+    betOnHand: (amount: string) => `Apuesta ${amount}`,
+    playing: 'Tu turno',
+  },
+);
+
+export type Strings = (typeof STR)['en'];

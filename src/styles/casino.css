@@ -1,0 +1,265 @@
+/* ---------- Casino (play money) shared UI ---------- */
+.cs-play {
+  --cs-up: var(--success);
+  --cs-down: var(--error-text);
+}
+.cs-money.is-up {
+  color: var(--success);
+}
+.cs-money.is-down {
+  color: var(--error-text);
+}
+.cs-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.cs-net-chip {
+  gap: 6px;
+}
+.cs-rounds {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.cs-disclaimer {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* Bet box */
+.cs-bet {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.cs-bet-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: text;
+}
+.cs-bet-field:focus-within {
+  border-color: var(--game-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--game-color) 25%, transparent);
+}
+.cs-bet-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cs-bet-input {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.cs-bet-input input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.cs-bet-step {
+  flex: none;
+  min-width: 48px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.cs-bet-step:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.cs-bet-step:disabled,
+.cs-bet.is-disabled .cs-bet-field {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Result banner */
+.cs-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-align: center;
+  animation: cs-pop 0.25s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+.cs-result strong {
+  font-size: 17px;
+}
+.cs-result span {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cs-result-win {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.cs-result-loss {
+  background: color-mix(in srgb, var(--error-text) 12%, var(--surface));
+  color: var(--error-text);
+}
+.cs-result-push {
+  background: var(--surface-2);
+  color: var(--text);
+}
+@keyframes cs-pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Stats panel */
+.cs-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cs-empty {
+  margin: 0;
+  color: var(--text-2);
+}
+.cs-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.cs-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.cs-kpi strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.cs-kpi > span {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.cs-wlp {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cs-chart {
+  margin: 0;
+}
+.cs-chart figcaption,
+.cs-sub {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cs-chart-svg {
+  display: block;
+  width: 100%;
+  height: 140px;
+}
+.cs-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.cs-zero {
+  stroke: var(--border-strong);
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+.cs-area-up {
+  fill: color-mix(in srgb, var(--success) 22%, transparent);
+}
+.cs-area-down {
+  fill: color-mix(in srgb, var(--error-text) 22%, transparent);
+}
+.cs-recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cs-recent li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.cs-recent-when,
+.cs-recent-stake {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cs-recent-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-reset {
+  align-self: flex-start;
+}
+@media (max-width: 480px) {
+  .cs-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cs-recent li {
+    grid-template-columns: 1fr auto auto;
+  }
+  .cs-recent-when {
+    display: none;
+  }
+}
+
+/* Home + Stats page sections */
+.home-casino-head {
+  margin-top: 20px;
+}
+.cs-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cs-stats-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.cs-stats-head p {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 14px;
+}

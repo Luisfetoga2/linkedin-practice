@@ -1,0 +1,590 @@
+.wrap {
+  /* The field is a dark game surface in both themes; only its frame and the accents shift. */
+  --gm-board: #1c1540;
+  --gm-board-2: #2a1f5e;
+  --gm-frame: rgba(20, 12, 48, 0.25);
+  --gm-tile: #4b3a93;
+  --gm-tile-top: #5d4aae;
+  --gm-tile-hover: #6a56c4;
+  --gm-tile-edge: #2a1e5e;
+  --gm-open: #120c2a;
+  --gm-gem-glow: rgba(62, 224, 160, 0.6);
+  --gm-mine-glow: rgba(255, 64, 84, 0.75);
+  --gm-accent: var(--game-color, #6b3fd6);
+  --gm-accent-ink: #fff;
+  --gm-cash: #1fcf8a;
+  --gm-cash-edge: #12935f;
+  --gm-cash-ink: #05281a;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+:global(:root[data-theme='dark']) .wrap {
+  --gm-board: #150f31;
+  --gm-board-2: #221a4d;
+  --gm-frame: rgba(255, 255, 255, 0.08);
+  --gm-open: #0c0820;
+  --gm-accent: #8f6bff;
+  --gm-accent-ink: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .wrap {
+    --gm-board: #150f31;
+    --gm-board-2: #221a4d;
+    --gm-frame: rgba(255, 255, 255, 0.08);
+    --gm-open: #0c0820;
+    --gm-accent: #8f6bff;
+    --gm-accent-ink: #fff;
+  }
+}
+
+/* ---------- Round stats ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.stat {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.statLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 420px) {
+  .stat {
+    padding: 8px;
+  }
+  .statLabel {
+    font-size: 10px;
+    letter-spacing: 0.01em;
+  }
+}
+.statLabel,
+.statValue,
+.statSub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statValue {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.statValue.up {
+  color: var(--success);
+}
+.statSub {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Board ---------- */
+/* Full width on phones; on short screens it shrinks so the Bet / Cash out button stays in view. */
+.boardWrap {
+  position: relative;
+  width: min(100%, max(300px, 100dvh - 470px));
+  margin-inline: auto;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: clamp(6px, 2vw, 10px);
+  padding: clamp(9px, 2.8vw, 14px) clamp(9px, 2.8vw, 14px) clamp(12px, 3.4vw, 17px);
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--gm-board-2), transparent 70%),
+    var(--gm-board);
+  box-shadow:
+    0 0 0 1px var(--gm-frame),
+    0 10px 28px -12px rgba(20, 10, 60, 0.55);
+  touch-action: manipulation;
+}
+.lost {
+  animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.12s;
+}
+.won {
+  animation: glow 1.1s ease-out;
+}
+
+.tile {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: clamp(8px, 2.4vw, 12px);
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.tile:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+/* Hidden tiles are raised squares with a darker edge underneath. */
+.closed {
+  background: linear-gradient(180deg, var(--gm-tile-top), var(--gm-tile));
+  box-shadow:
+    0 5px 0 var(--gm-tile-edge),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease,
+    filter 0.12s ease;
+}
+.closed:disabled {
+  cursor: default;
+}
+.live .closed {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .live .closed:hover {
+    filter: brightness(1.14);
+    transform: translateY(-4px);
+    box-shadow:
+      0 7px 0 var(--gm-tile-edge),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+.live .closed:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 2px 0 var(--gm-tile-edge),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition-duration: 0.05s;
+}
+/* A light sheen so the waiting field doesn't look flat. */
+.closed::after {
+  content: '';
+  position: absolute;
+  inset: 12% 14% auto;
+  height: 22%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+  pointer-events: none;
+}
+
+/* Opened tiles sink into the board and flip in. */
+.open {
+  background: var(--gm-open);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.55);
+  cursor: default;
+  animation: flip 0.4s cubic-bezier(0.2, 1.25, 0.4, 1) var(--d, 0ms) backwards;
+}
+.open.isGem {
+  background:
+    radial-gradient(circle at 50% 46%, rgba(62, 224, 160, 0.26), transparent 68%),
+    var(--gm-open);
+}
+.open.isMine {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 64, 84, 0.2), transparent 70%),
+    var(--gm-open);
+}
+.open.hit {
+  z-index: 1;
+  background: radial-gradient(circle at 50% 48%, #ff5a67 0%, #b31d33 55%, #5c0c1f 100%);
+  box-shadow:
+    0 0 0 2px #ff6b77,
+    0 0 26px 4px var(--gm-mine-glow);
+  animation:
+    flip 0.4s cubic-bezier(0.2, 1.25, 0.4, 1),
+    hitPulse 1.4s ease-in-out 0.4s 2;
+}
+.open.dim {
+  background: var(--gm-open);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45);
+  /* Stays a raised tile until the ripple reaches it, then turns over. */
+  animation: turnOver 0.42s ease-in-out var(--d, 0ms) backwards;
+}
+
+.face {
+  width: 70%;
+  height: 70%;
+  display: grid;
+  place-items: center;
+  animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) calc(var(--d, 0ms) + 90ms) backwards;
+}
+.face svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.gem {
+  filter: drop-shadow(0 0 7px var(--gm-gem-glow));
+}
+.mine {
+  filter: drop-shadow(0 0 6px rgba(255, 64, 84, 0.45));
+}
+.hit .mine {
+  filter: drop-shadow(0 0 10px rgba(255, 220, 120, 0.7));
+}
+.dim .face {
+  opacity: 0.38;
+  transform: scale(0.78);
+  animation: popDim 0.26s ease-out calc(var(--d, 0ms) + 0.2s) backwards;
+}
+.dim .gem,
+.dim .mine {
+  filter: saturate(0.7);
+}
+
+/* The end-of-round banner floats over the middle of the field. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  cursor: pointer;
+  animation: overlayIn 0.3s ease-out 0.45s backwards;
+}
+.overlayCard {
+  min-width: min(100%, 230px);
+  max-width: 100%;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 12px 32px rgba(8, 4, 24, 0.55);
+}
+.overlayCard > * {
+  padding: 14px 18px;
+  animation: none;
+}
+
+/* ---------- Controls ---------- */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.minesBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.minesHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.minesInfo {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.minesRow {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.stepper {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.step {
+  width: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.step svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.step:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.minesValue {
+  min-width: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  border-inline: 1px solid var(--border);
+}
+.quick {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.chip {
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+.chip:hover:not(:disabled):not(.chipOn) {
+  background: var(--surface-2);
+}
+.chip.chipOn {
+  background: var(--gm-accent);
+  border-color: var(--gm-accent);
+  color: var(--gm-accent-ink);
+}
+.chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.minesRow:has(.chip:disabled) .minesValue {
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.wrap .actions .mainBtn.mainBtn {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  background: var(--gm-accent);
+  color: var(--gm-accent-ink);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--gm-accent) 60%, #000);
+  transform: translateY(-2px);
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s,
+    filter 0.12s,
+    background-color 0.15s;
+}
+.wrap .actions .mainBtn.mainBtn:hover:not(:disabled) {
+  background: var(--gm-accent);
+  filter: brightness(1.08);
+}
+.wrap .actions .mainBtn.mainBtn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--gm-accent) 60%, #000);
+}
+.wrap .actions .mainBtn.cashBtn,
+.wrap .actions .mainBtn.cashBtn:hover:not(:disabled) {
+  background: var(--gm-cash);
+  color: var(--gm-cash-ink);
+  box-shadow: 0 4px 0 var(--gm-cash-edge);
+}
+.wrap .actions .mainBtn.cashBtn:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--gm-cash-edge);
+}
+.wrap .actions .mainBtn.mainBtn:disabled {
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+.wrap .actions .randomBtn.randomBtn {
+  flex: none;
+  min-height: 52px;
+  padding-inline: 14px;
+  border-radius: 12px;
+  color: var(--gm-accent);
+  box-shadow: inset 0 0 0 1.5px var(--gm-accent);
+}
+.wrap .actions .randomBtn.randomBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gm-accent) 12%, transparent);
+  box-shadow: inset 0 0 0 2px var(--gm-accent);
+}
+.dice {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.dice rect {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.dice circle {
+  fill: currentColor;
+}
+.keys {
+  margin: -2px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+@media (hover: none) {
+  .keys {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .controls {
+    padding: 10px;
+  }
+  .wrap .actions .randomBtn.randomBtn {
+    padding-inline: 12px;
+    font-size: 15px;
+  }
+}
+
+/* ---------- Motion ---------- */
+@keyframes flip {
+  from {
+    transform: perspective(360px) rotateY(-90deg) scale(0.88);
+  }
+  60% {
+    transform: perspective(360px) rotateY(8deg) scale(1.07);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes turnOver {
+  from {
+    background-color: var(--gm-tile);
+    box-shadow: 0 5px 0 var(--gm-tile-edge);
+    transform: translateY(-2px);
+  }
+  47% {
+    background-color: var(--gm-tile);
+    box-shadow: 0 5px 0 var(--gm-tile-edge);
+    transform: perspective(360px) translateY(-2px) rotateY(90deg);
+  }
+  48% {
+    background-color: var(--gm-open);
+    box-shadow: none;
+    transform: perspective(360px) rotateY(-90deg);
+  }
+}
+@keyframes pop {
+  from {
+    transform: scale(0.2) rotate(-12deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.18) rotate(3deg);
+    opacity: 1;
+  }
+}
+@keyframes popDim {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+@keyframes hitPulse {
+  50% {
+    box-shadow:
+      0 0 0 2px #ff8a93,
+      0 0 34px 8px var(--gm-mine-glow);
+  }
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes glow {
+  30% {
+    box-shadow:
+      0 0 0 2px rgba(62, 224, 160, 0.8),
+      0 0 36px 4px rgba(62, 224, 160, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board,
+  .overlay,
+  .open,
+  .open.hit,
+  .face {
+    animation: none;
+  }
+  .closed {
+    transition: none;
+  }
+}

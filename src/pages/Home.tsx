@@ -8,6 +8,10 @@ import { SiteFooter, SiteHeader } from './SiteHeader';
 import { ActivityHeatmap } from './Activity';
 import { pick } from '../lib/i18n';
 import { useCore } from '../i18n/core';
+import { casinoGames } from '../casino/registry';
+import { casinoStats, useCasinoRecords } from '../casino/wallet';
+import { Money } from '../casino/components';
+import { CS } from '../casino/i18n';
 
 export function Home() {
   const histories = useAllHistories(gameIds);
@@ -17,6 +21,8 @@ export function Home() {
   const today = dayKey();
   const solvedToday = winDays.get(today) ?? 0;
   const totalSolved = [...winDays.values()].reduce((a, b) => a + b, 0);
+  const casinoRecords = useCasinoRecords();
+  const cs = CS[lang];
 
   return (
     <div className="site">
@@ -62,6 +68,41 @@ export function Home() {
                             <Check size={14} strokeWidth={3} />
                           </span>
                         )}
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="home-list-head home-casino-head">
+              <h2>{cs.casino}</h2>
+              <p>{cs.casinoSub}</p>
+            </div>
+            <ul className="home-rows">
+              {casinoGames.map(({ meta }) => {
+                const s = casinoStats(casinoRecords, meta.id);
+                return (
+                  <li key={meta.id}>
+                    <a className="home-row" href={href(`casino/${meta.id}`)} style={{ '--game-tint': meta.tint, '--game-color': meta.color } as React.CSSProperties}>
+                      <div className="home-row-text">
+                        <span className="home-row-tag">{pick(meta.tagline, lang)}</span>
+                        <span className="home-row-name">{pick(meta.name, lang)}</span>
+                        <span className="home-row-meta">
+                          {s.rounds === 0 ? (
+                            cs.notPlayed
+                          ) : (
+                            <>
+                              <span>
+                                {cs.net} <Money value={s.net} lang={lang} />
+                              </span>
+                              <span>{cs.nRounds(s.rounds)}</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="home-row-tile">
+                        <meta.Icon size={52} />
                       </div>
                     </a>
                   </li>

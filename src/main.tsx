@@ -3,8 +3,13 @@ import { createRoot } from 'react-dom/client';
 import './styles/global.css';
 import './styles/core.css';
 import './styles/pages.css';
+import './styles/casino.css';
 import { App } from './App';
 import { reloadForNewBuild } from './lib/chunks';
+import { closeAbandoned } from './casino/wallet';
+
+// Nothing can be mid-round on a fresh page load: casino rounds still open were abandoned (lost).
+closeAbandoned();
 
 // A chunk from an older deploy is gone: reload into the new build instead of failing.
 window.addEventListener('vite:preloadError', (e) => {

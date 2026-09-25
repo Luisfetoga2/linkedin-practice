@@ -12,6 +12,7 @@ import { toast } from '../core/components/Toast';
 import { SiteFooter, SiteHeader } from './SiteHeader';
 import { ActivityHeatmap } from './Activity';
 import { ChartTip } from './ChartTip';
+import { CasinoStatsSection } from '../casino/CasinoStatsSection';
 import { formatClock, formatDate, pick, type Lang } from '../lib/i18n';
 import { useCore, type CoreStrings } from '../i18n/core';
 
@@ -55,6 +56,7 @@ export function StatsPage({ gameId }: { gameId?: string }) {
           </nav>
 
           {entry ? <GameStatsView entry={entry} history={histories[entry.meta.id] ?? []} /> : <AllGames histories={histories} />}
+          {!entry && <CasinoStatsSection />}
 
           <DataTools />
           <SiteFooter />

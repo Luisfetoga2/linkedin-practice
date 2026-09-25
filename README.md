@@ -1,6 +1,7 @@
 # Games Practice
 
 Endless practice rounds of LinkedIn-style daily puzzle games — **Queens, Tango, Zip, Mini Sudoku, Patches, Wend, Crossclimb, Pinpoint** — plus **Wordle**, **Nonogram**, a **Mini Crossword** and **Minesweeper**.
+There's also a play-money **Casino** (Blackjack, Gems and Crossy Road) that tracks your net winnings, win rate and biggest wins and losses. No real money is involved.
 Every round is freshly generated, with the same hints the originals offer, a timer, and local streaks and statistics. No login; everything is stored in your browser.
 
 Live site: https://luisfetoga2.github.io/linkedin-practice/
@@ -35,6 +36,7 @@ src/
   lib/         seeded RNG, localStorage store, stats/streaks, hash router, settings
   pages/       Home and Stats
   games/<id>/  meta.tsx (name, colors, rules, options) + Game.tsx (lazy-loaded) + generator/solver
+  casino/      play-money casino: CasinoShell (bet box, net, stats), wallet (round records), games/<id>/
 ```
 
 - **Hosting**: static build deployed to GitHub Pages by `.github/workflows/deploy.yml` on every push to `main`. Vite's `base` is `/linkedin-practice/`, and routing uses the URL hash, so deep links and refreshes work without a server.
