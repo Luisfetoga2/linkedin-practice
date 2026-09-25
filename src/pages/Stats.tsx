@@ -11,6 +11,7 @@ import { Flame } from '../core/components/Icons';
 import { toast } from '../core/components/Toast';
 import { SiteFooter, SiteHeader } from './SiteHeader';
 import { ActivityHeatmap } from './Activity';
+import { ChartTip } from './ChartTip';
 import { formatClock, formatDate, pick, type Lang } from '../lib/i18n';
 import { useCore, type CoreStrings } from '../i18n/core';
 
@@ -249,6 +250,7 @@ function niceStep(maxMs: number): number {
 
 function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: number | null; entry: GameEntry }) {
   const [hover, setHover] = useState<number | null>(null);
+  const bars = useRef<(SVGPathElement | null)[]>([]);
   const { t, lang } = useCore();
   const wrap = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(480);
@@ -293,25 +295,25 @@ function TimesChart({ records, avgMs, entry }: { records: PlayRecord[]; avgMs: n
           return (
             <g key={r.at} onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)}>
               <rect x={padL + i * slot} y={padT} width={slot} height={H - padT - padB} fill="transparent" />
-              <path d={d} className={`chart-bar${r.ms === best ? ' is-best' : ''}${hover === i ? ' is-hover' : ''}`} />
+              <path
+                ref={(el) => {
+                  bars.current[i] = el;
+                }}
+                d={d}
+                className={`chart-bar${r.ms === best ? ' is-best' : ''}${hover === i ? ' is-hover' : ''}`}
+              />
             </g>
           );
         })}
         {avgMs !== null && <line x1={padL} x2={W} y1={y(avgMs)} y2={y(avgMs)} className="chart-avg" />}
       </svg>
-      {hover !== null && records[hover] && (
-        <div
-          className="chart-tip"
-          style={{
-            left: `${((padL + hover * slot + slot / 2) / W) * 100}%`,
-            top: `${(y(records[hover].ms) / H) * 100}%`,
-          }}
-        >
+      {hover !== null && records[hover] && bars.current[hover] && (
+        <ChartTip anchor={bars.current[hover]!}>
           <strong>{formatTime(records[hover].ms)}</strong>
           <span>{formatDate(records[hover].at, lang, { month: 'short', day: 'numeric' })}</span>
           <span>{variantLabel(entry, records[hover].variant, t, lang)}</span>
           {records[hover].hints > 0 && <span>{t.hintsCount(records[hover].hints)}</span>}
-        </div>
+        </ChartTip>
       )}
     </div>
   );

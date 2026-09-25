@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { addDays, dayKey } from '../lib/time';
 import { formatDate } from '../lib/i18n';
 import { useCore } from '../i18n/core';
+import { ChartTip } from './ChartTip';
 
 function level(n: number): number {
   if (n === 0) return 0;
@@ -13,7 +14,7 @@ function level(n: number): number {
 
 /** GitHub-style calendar of wins per day, single-hue sequential scale. */
 export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number>; weeks?: number }) {
-  const [hover, setHover] = useState<{ key: string; n: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ key: string; n: number; el: Element } | null>(null);
   const { t, lang } = useCore();
   const cols = useMemo(() => {
     const today = dayKey();
@@ -34,6 +35,13 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
     return out;
   }, [days, weeks]);
 
+  // On narrow screens the calendar scrolls sideways: start at the recent end, like GitHub.
+  const scroller = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [weeks]);
+
   const cell = 13;
   const gap = 3;
   const width = weeks * (cell + gap) - gap;
@@ -41,7 +49,7 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
 
   return (
     <div className="heatmap">
-      <div className="heatmap-scroll">
+      <div className="heatmap-scroll" ref={scroller}>
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t.solvesPerDay}>
           {cols.map((col, w) =>
             col.map((c, r) =>
@@ -54,7 +62,7 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
                   height={cell}
                   rx={3}
                   className={`heat-${level(c.n)}`}
-                  onPointerEnter={() => setHover({ key: c.key, n: c.n, x: w * (cell + gap) + cell / 2, y: r * (cell + gap) })}
+                  onPointerEnter={(e) => setHover({ key: c.key, n: c.n, el: e.currentTarget })}
                   onPointerLeave={() => setHover(null)}
                 />
               ),
@@ -62,10 +70,10 @@ export function ActivityHeatmap({ days, weeks = 17 }: { days: Map<string, number
           )}
         </svg>
         {hover && (
-          <div className="chart-tip" style={{ left: hover.x, top: hover.y }}>
+          <ChartTip anchor={hover.el}>
             <strong>{hover.n === 0 ? t.noSolves : t.nSolved(hover.n)}</strong>
             <span>{formatDate(new Date(hover.key + 'T12:00'), lang, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-          </div>
+          </ChartTip>
         )}
       </div>
       <div className="heatmap-legend" aria-hidden>

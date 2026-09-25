@@ -724,3 +724,9 @@
     display: none;
   }
 }
+/* Tooltips float over the page (see ChartTip), so clipped containers can't cut them off. */
+.chart-tip-fixed {
+  position: fixed;
+  transform: none;
+  z-index: 50;
+}
