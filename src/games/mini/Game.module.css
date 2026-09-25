@@ -134,8 +134,10 @@
   background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--mc-wrong) calc(50% - 1.5px), var(--mc-wrong) calc(50% + 1.5px), transparent calc(50% + 1.5px));
   pointer-events: none;
 }
-/* Revealed squares: a small triangle in the top-right corner. */
-.revealed::after {
+/* Confirmed squares (revealed, or checked right by Check word / Autocheck): a small triangle in
+   the top-right corner, a blue letter, and they can't be changed. */
+.revealed::after,
+.right::after {
   content: '';
   position: absolute;
   top: 0;

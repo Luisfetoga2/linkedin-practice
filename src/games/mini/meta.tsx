@@ -54,8 +54,8 @@ export const meta: GameMeta = {
       key: 'autoCheck',
       label: { en: 'Autocheck', es: 'Revisión automática' },
       description: {
-        en: 'Mark wrong letters as soon as you type them.',
-        es: 'Marca las letras incorrectas en cuanto las escribes.',
+        en: 'Check each letter as you type it: wrong ones get a slash, right ones are locked in.',
+        es: 'Revisa cada letra al escribirla: las incorrectas se tachan y las correctas quedan fijas.',
       },
       default: false,
     },
@@ -78,7 +78,7 @@ export const meta: GameMeta = {
           <li>Type with your keyboard or the one on screen. The cursor moves through the word and then on to the next clue. Enter or Tab jumps to the next clue; the arrows on the clue bar step through them.</li>
           <li>Numbers in the corners match the clues. On a wide screen, all the clues are listed beside the grid — click one to jump to it.</li>
           <li>Stuck? Reveal square fills in the selected letter (marked with a small triangle), and Check word marks wrong letters in the current word with a red slash. Each use counts as a hint.</li>
-          <li>Turn on Autocheck in the settings to see wrong letters as you type. Pick the 4×4 size for a quicker, easier puzzle.</li>
+          <li>Turn on Autocheck under the board to check letters as you type: wrong ones get a slash, and right ones turn blue with a red corner and are locked in, like revealed squares. Pick the 4×4 size for a quicker, easier puzzle.</li>
         </ul>
       </>
     ),
@@ -90,7 +90,7 @@ export const meta: GameMeta = {
           <li>Escribe con tu teclado o con el de la pantalla. El cursor avanza por la palabra y luego pasa a la siguiente pista. Enter o Tab saltan a la siguiente pista; las flechas de la barra recorren las pistas.</li>
           <li>Los números de las esquinas corresponden a las pistas. En una pantalla ancha, todas las pistas aparecen junto a la cuadrícula: haz clic en una para ir a ella.</li>
           <li>¿No sabes cómo seguir? Revelar casilla completa la letra seleccionada (marcada con un pequeño triángulo) y Revisar palabra marca con una raya roja las letras incorrectas de la palabra actual. Cada uso cuenta como una pista.</li>
-          <li>Activa la revisión automática en la configuración para ver las letras incorrectas mientras escribes. Elige el tamaño 4×4 para un crucigrama más rápido y fácil.</li>
+          <li>Activa la revisión automática debajo del tablero para revisar las letras mientras escribes: las incorrectas se tachan y las correctas se ponen azules con una esquina roja y quedan fijas, como las casillas reveladas. Elige el tamaño 4×4 para un crucigrama más rápido y fácil.</li>
           <li>Con las palabras en español, los acentos no cuentan (Á es A) y la Ñ es una letra aparte.</li>
         </ul>
       </>

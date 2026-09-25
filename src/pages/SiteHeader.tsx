@@ -47,7 +47,7 @@ export function SiteHeader({ active }: { active: 'games' | 'stats' }) {
         </nav>
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title={t.settings}>
-        <SettingsPanel defs={[]} />
+        <SettingsPanel />
       </Modal>
     </header>
   );

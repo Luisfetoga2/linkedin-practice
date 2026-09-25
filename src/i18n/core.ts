@@ -50,7 +50,6 @@ export const CORE = defineStrings(
     englishOnly: 'This game is English-only for now.',
 
     // Settings
-    thisGame: 'This game',
     general: 'General',
     theme: 'Theme',
     themeAuto: 'Auto',
@@ -208,7 +207,6 @@ export const CORE = defineStrings(
     playAgain: 'Jugar de nuevo',
     englishOnly: 'Por ahora este juego solo está en inglés.',
 
-    thisGame: 'Este juego',
     general: 'General',
     theme: 'Tema',
     themeAuto: 'Auto',

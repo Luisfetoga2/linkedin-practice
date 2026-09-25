@@ -133,9 +133,22 @@ function Board({ seed, lang, options, paused, onReady, onHint, onComplete, wordL
   // ---- state updates ---------------------------------------------------------------------
   const clearFlag = (i: number, fl = flagged) => (fl[i] ? fl.map((v, j) => (j === i ? false : v)) : fl);
 
+  /** With Autocheck on, right letters are confirmed at once: shown like revealed ones and locked. */
+  const confirmRight = (grid: string[]) => {
+    if (!autoCheck) return;
+    setRight((prev) => (grid.some((ch, i) => ch && !prev[i] && ch === puzzle.solution[i]) ? prev.map((v, i) => v || (!!grid[i] && grid[i] === puzzle.solution[i])) : prev));
+  };
+
+  // Turning Autocheck on mid-puzzle confirms what's already right.
+  useEffect(() => {
+    if (autoCheck && !doneRef.current) confirmRight(entries);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCheck]);
+
   /** Apply a new grid; detects a win, or a full grid that isn't right yet. */
   const commit = (next: string[]) => {
     setEntries(next);
+    confirmRight(next);
     if (isSolved(puzzle, next)) {
       finish(next);
       return;

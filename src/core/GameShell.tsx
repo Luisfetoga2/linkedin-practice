@@ -434,6 +434,8 @@ export function GameShell({ entry }: { entry: GameEntry }) {
               )}
             </div>
 
+            {phase === 'playing' && meta.settings?.length ? <GameToggles gameId={meta.id} defs={meta.settings} /> : null}
+
             {phase === 'done' && finished && !showResult && (
               <div className="lp-done-bar">
                 <span>
@@ -481,7 +483,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
       </Modal>
 
       <Modal open={modal === 'settings'} onClose={() => setModal(null)} title={t.settings}>
-        <SettingsPanel gameId={meta.id} defs={meta.settings ?? []} />
+        <SettingsPanel />
       </Modal>
 
       <Modal open={modal === 'variant'} onClose={() => setModal(null)} title={t.puzzleType}>
@@ -524,32 +526,37 @@ function VariantPicker({ entry, current, onPick }: { entry: GameEntry; current: 
   );
 }
 
-function GameSettingToggle({ gameId, def }: { gameId: string; def: GameSettingDef }) {
-  const [value, set] = useGameSetting<boolean>(gameId, def.key, def.default);
-  const { lang } = useCore();
+/** This game's own options (Autocheck, Show mistakes...), as switches right under the board. */
+function GameToggles({ gameId, defs }: { gameId: string; defs: GameSettingDef[] }) {
   return (
-    <Toggle
-      checked={value}
-      onChange={set}
-      label={pick(def.label, lang)}
-      description={def.description === undefined ? undefined : pick(def.description, lang)}
-    />
+    <div className="lp-game-toggles">
+      {defs.map((d) => (
+        <GameToggleChip key={d.key} gameId={gameId} def={d} />
+      ))}
+    </div>
   );
 }
 
-export function SettingsPanel({ gameId, defs }: { gameId?: string; defs: GameSettingDef[] }) {
+function GameToggleChip({ gameId, def }: { gameId: string; def: GameSettingDef }) {
+  const [value, set] = useGameSetting<boolean>(gameId, def.key, def.default);
+  const { lang } = useCore();
+  const description = def.description === undefined ? undefined : pick(def.description, lang);
+  return (
+    <button type="button" role="switch" aria-checked={value} className={`lp-gtoggle${value ? ' is-on' : ''}`} onClick={() => set(!value)} title={description}>
+      <span className="lp-gtoggle-track" aria-hidden>
+        <span className="lp-gtoggle-thumb" />
+      </span>
+      {pick(def.label, lang)}
+    </button>
+  );
+}
+
+/** App-wide settings (the gear button). A game's own options sit under its board instead. */
+export function SettingsPanel() {
   const [settings, update] = useAppSettings();
   const { t } = useCore();
   return (
     <div className="lp-settings">
-      {gameId && defs.length > 0 && (
-        <section>
-          <h3 className="lp-settings-heading">{t.thisGame}</h3>
-          {defs.map((d) => (
-            <GameSettingToggle key={d.key} gameId={gameId} def={d} />
-          ))}
-        </section>
-      )}
       <section>
         <h3 className="lp-settings-heading">{t.general}</h3>
         <div className="lp-toggle-row">
