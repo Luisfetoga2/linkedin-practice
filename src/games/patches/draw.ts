@@ -36,14 +36,16 @@ export function overlapsPatch(patches: Patches, rect: Rect, skip = -1): boolean 
 }
 
 /**
- * LinkedIn never lets a rectangle cover a drawn patch. Grows `base` toward `cell` as far as it can
- * without touching another patch (`skip` = the patch being resized): of the rectangles spanning
- * `base` plus one cell between it and the pointer, the largest free one wins (ties: closest to the
- * pointer). `base` itself is assumed free, so the result never shrinks below it.
+ * LinkedIn never lets a rectangle cover a drawn patch, or take in a second clue. Grows `base`
+ * toward `cell` as far as it can without either (`skip` = the patch being resized): of the
+ * rectangles spanning `base` plus one cell between it and the pointer, the largest allowed one wins
+ * (ties: closest to the pointer). `base` itself is assumed allowed, so the result never shrinks
+ * below it.
  */
-export function clampGrow(base: Rect, cell: number, n: number, patches: Patches, skip = -1): Rect {
+export function clampGrow(base: Rect, cell: number, n: number, patches: Patches, skip = -1, clues: readonly Clue[] = []): Rect {
+  const blocked = (rect: Rect) => overlapsPatch(patches, rect, skip) || cluesIn(clues, rect).length > 1;
   const target = bbox(base, cellRect(cell, n));
-  if (!overlapsPatch(patches, target, skip)) return target;
+  if (!blocked(target)) return target;
   const tr = Math.floor(cell / n);
   const tc = cell % n;
   let best = base;
@@ -56,7 +58,7 @@ export function clampGrow(base: Rect, cell: number, n: number, patches: Patches,
       if (area < bestArea) continue;
       const dist = Math.abs(r - tr) + Math.abs(c - tc);
       if (area === bestArea && dist >= bestDist) continue;
-      if (overlapsPatch(patches, rect, skip)) continue;
+      if (blocked(rect)) continue;
       best = rect;
       bestArea = area;
       bestDist = dist;
@@ -78,10 +80,10 @@ export function resolveNew(clues: readonly Clue[], box: Rect): DrawOutcome {
 /**
  * Resizing (drag started on an existing patch), as in LinkedIn: the patch spans its original
  * rectangle plus the cell currently under the pointer, so it grows and shrinks back as you move.
- * It stops at other patches (see clampGrow).
+ * It stops at other patches and other clues (see clampGrow).
  */
-export function resizeRect(base: Rect, clue: number, cell: number, n: number, patches: Patches = []): Rect {
-  return clampGrow(base, cell, n, patches, clue);
+export function resizeRect(base: Rect, clue: number, cell: number, n: number, patches: Patches = [], clues: readonly Clue[] = []): Rect {
+  return clampGrow(base, cell, n, patches, clue, clues);
 }
 
 export function resolveResize(
@@ -92,7 +94,7 @@ export function resolveResize(
   n: number,
   patches: Patches = [],
 ): DrawOutcome {
-  const rect = resizeRect(base, clue, cell, n, patches);
+  const rect = resizeRect(base, clue, cell, n, patches, clues);
   const inside = cluesIn(clues, rect);
   if (inside.length === 1 && inside[0] === clue) return { kind: 'place', rect, clue };
   return { kind: 'multi' };

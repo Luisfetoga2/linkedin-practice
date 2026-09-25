@@ -17,6 +17,12 @@ describe('new rectangles', () => {
     expect(resolveNew(clues, R(2, 0, 2, 5)).kind).toBe('multi');
   });
 
+  it('never take in a second clue: the box stops just before it', () => {
+    expect(clampGrow(R(2, 0, 2, 0), cell(2, 5), N, [], -1, clues)).toEqual(R(2, 0, 2, 4)); // across the 6, stops before the 4
+    expect(clampGrow(R(0, 1, 0, 1), cell(4, 5), N, [], -1, clues)).toEqual(R(0, 1, 4, 4)); // diagonal: keeps the 6, stops a column short of the 4
+    expect(clampGrow(R(0, 0, 0, 0), cell(1, 1), N, [], -1, clues)).toEqual(R(0, 0, 1, 1)); // no clue yet: grows freely
+  });
+
   it('never grow over an existing patch (LinkedIn): the box stops at its edge', () => {
     const patches: Patches = [null, R(1, 4, 3, 5)]; // clue 1's patch
     // Dragging from (2,0) straight right stops before column 4.
@@ -49,8 +55,9 @@ describe('resizing (LinkedIn video)', () => {
     expect(resolveResize(clues, base, 0, cell(2, 1), N)).toEqual({ kind: 'place', rect: base, clue: 0 });
   });
 
-  it('refuses to grow over another clue', () => {
-    expect(resolveResize(clues, base, 0, cell(2, 5), N).kind).toBe('multi');
+  it('stops just before another clue', () => {
+    expect(resolveResize(clues, base, 0, cell(2, 5), N)).toEqual({ kind: 'place', rect: R(2, 0, 2, 4), clue: 0 });
+    expect(resolveResize(clues, base, 0, cell(3, 5), N)).toEqual({ kind: 'place', rect: R(2, 0, 3, 4), clue: 0 });
   });
 
   it('stops at other patches but ignores itself', () => {

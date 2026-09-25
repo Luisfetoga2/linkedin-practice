@@ -139,7 +139,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     const out = outcomeOf(d);
     if (d.resize) {
       if (out.kind === 'place') setPreview({ rect: out.rect, clue: out.clue, bad: false });
-      else setPreview({ rect: resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current), clue: d.resize.clue, bad: true });
+      else setPreview({ rect: resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current, clues), clue: d.resize.clue, bad: true });
     } else setPreview({ rect: d.box, clue: -1, bad: out.kind === 'multi' });
   };
 
@@ -225,8 +225,9 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (cell === d.cur) return;
     d.cur = cell;
     d.moved = true;
-    // Every cell you drag through joins the box, but it never grows over a drawn patch (LinkedIn).
-    if (!d.resize) d.box = clampGrow(d.box, cell, n, patchesRef.current);
+    // Every cell you drag through joins the box, but it never grows over a drawn patch or takes in
+    // a second clue (LinkedIn).
+    if (!d.resize) d.box = clampGrow(d.box, cell, n, patchesRef.current, -1, clues);
     if (d.resize) setResizing(d.resize.clue);
     updatePreview(d);
   };
@@ -254,7 +255,7 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     if (!d.resize && rectArea(d.box) < 2) return; // blocked right away by a patch: nothing drawn
     const out = outcomeOf(d);
     if (out.kind !== 'place') {
-      const rect = d.resize ? resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current) : d.box;
+      const rect = d.resize ? resizeRect(d.resize.base, d.resize.clue, d.cur, n, patchesRef.current, clues) : d.box;
       setShake(rect);
       later(() => setShake(null), 450);
       toast(out.kind === 'none' ? t.needsOneClue : t.onlyOneClue);
