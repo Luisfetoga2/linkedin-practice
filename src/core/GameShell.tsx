@@ -86,6 +86,9 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   const gameUrl = useRef(window.location.href);
   /** Why the quit dialog is open: browser back, or an in-app link to this hash. */
   const quitVia = useRef<'back' | string>('back');
+  /** Set while the dialog asks about starting over (New, or a different puzzle type) instead of leaving. */
+  const pendingRestart = useRef<(() => void) | null>(null);
+  const [quitKind, setQuitKind] = useState<'leave' | 'new'>('leave');
 
   const pushGuard = useCallback(() => {
     if (guardPushed.current) return;
@@ -110,6 +113,8 @@ export function GameShell({ entry }: { entry: GameEntry }) {
       } else if (guardedRef.current && !leaving.current) {
         window.history.replaceState(null, '', gameUrl.current);
         quitVia.current = 'back';
+        pendingRestart.current = null;
+        setQuitKind('leave');
         setModal('quit');
       } else window.history.back();
     };
@@ -144,6 +149,8 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     if (guarded) {
       e.preventDefault();
       quitVia.current = target;
+      pendingRestart.current = null;
+      setQuitKind('leave');
       setModal('quit');
     } else if (guardPushed.current) {
       e.preventDefault();
@@ -152,12 +159,32 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     }
   };
 
+  /** Starting a new puzzle mid-round throws the current one away too, so ask first. */
+  const confirmNew = (run: () => void) => {
+    if (!guarded) {
+      setModal(null);
+      run();
+      return;
+    }
+    pendingRestart.current = run;
+    setQuitKind('new');
+    setModal('quit');
+  };
+
   const stay = () => {
     setModal(null);
-    if (quitVia.current === 'back') pushGuard();
+    if (pendingRestart.current) pendingRestart.current = null;
+    else if (quitVia.current === 'back') pushGuard();
   };
 
   const quit = () => {
+    const restart = pendingRestart.current;
+    if (restart) {
+      pendingRestart.current = null;
+      setModal(null);
+      restart();
+      return;
+    }
     leaving.current = true;
     setModal(null);
     if (quitVia.current !== 'back') {
@@ -392,7 +419,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
                     {optionLabel}
                   </button>
                 ) : null}
-                <button className="lp-chip" onClick={() => newRound()} title={t.newPuzzleTitle}>
+                <button className="lp-chip" onClick={() => confirmNew(() => newRound())} title={t.newPuzzleTitle}>
                   <Shuffle size={14} /> {t.newPuzzle}
                 </button>
               </div>
@@ -463,14 +490,14 @@ export function GameShell({ entry }: { entry: GameEntry }) {
       <Modal
         open={modal === 'quit'}
         onClose={stay}
-        title={t.quitTitle}
+        title={quitKind === 'new' ? t.newTitle : t.quitTitle}
         footer={
           <div className="lp-quit-actions">
             <button className="btn btn-secondary" onClick={stay}>
               {t.keepPlaying}
             </button>
             <button className="btn btn-primary" onClick={quit}>
-              {t.quit}
+              {quitKind === 'new' ? t.newConfirm : t.quit}
             </button>
           </div>
         }
@@ -490,10 +517,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
         <VariantPicker
           entry={entry}
           current={options}
-          onPick={(opts) => {
-            setModal(null);
-            begin(randomSeed(), opts);
-          }}
+          onPick={(opts) => confirmNew(() => begin(randomSeed(), opts))}
         />
       </Modal>
     </div>
