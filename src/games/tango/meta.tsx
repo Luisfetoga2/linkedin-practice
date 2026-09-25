@@ -1,18 +1,23 @@
 import type { GameMeta } from '../../core/types';
+import { FaceCell, IconFrame } from '../../core/components/GameIcon';
+
+/** Crescent moon centered on (cx, cy): a circle with an offset circle cut out of it. */
+function moon(cx: number, cy: number) {
+  const p = (x: number, y: number) => `${(cx + x).toFixed(2)} ${(cy + y).toFixed(2)}`;
+  return `M${p(-0.68, -5.56)}A5.6 5.6 0 1 0 ${p(5.39, 1.52)}A4.7 4.7 0 0 1 ${p(-0.68, -5.56)}Z`;
+}
 
 function Icon({ size = 48 }: { size?: number }) {
+  const cells = [5.5, 25];
+  const c = (i: number) => cells[i] + 8.75;
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#1f1f1f" />
-      <rect x="7" y="7" width="16.5" height="16.5" rx="2" fill="#fff" />
-      <rect x="24.5" y="7" width="16.5" height="16.5" rx="2" fill="#fff" />
-      <rect x="7" y="24.5" width="16.5" height="16.5" rx="2" fill="#fff" />
-      <rect x="24.5" y="24.5" width="16.5" height="16.5" rx="2" fill="#fff" />
-      <circle cx="15.25" cy="15.25" r="5.2" fill="#ffb02e" stroke="#e8890c" strokeWidth="1.4" />
-      <circle cx="32.75" cy="32.75" r="5.2" fill="#ffb02e" stroke="#e8890c" strokeWidth="1.4" />
-      <path d="M35.5 11.3a5.4 5.4 0 104.6 7.8 4.3 4.3 0 01-4.6-7.8z" fill="#4a8bf5" transform="translate(-3.5 -.6)" />
-      <path d="M18 28.8a5.4 5.4 0 104.6 7.8 4.3 4.3 0 01-4.6-7.8z" fill="#4a8bf5" transform="translate(-3.5 -.6)" />
-    </svg>
+    <IconFrame size={size} dark>
+      {[0, 1].flatMap((r) => [0, 1].map((q) => <FaceCell key={`${r}${q}`} x={cells[q]} y={cells[r]} w={17.5} h={17.5} r={3} fill="#fff" />))}
+      <circle cx={c(0)} cy={c(0)} r="5.3" fill="#ffb02e" stroke="#e8890c" strokeWidth="1.5" />
+      <circle cx={c(1)} cy={c(1)} r="5.3" fill="#ffb02e" stroke="#e8890c" strokeWidth="1.5" />
+      <path d={moon(c(1), c(0))} fill="#4a8bf5" />
+      <path d={moon(c(0), c(1))} fill="#4a8bf5" />
+    </IconFrame>
   );
 }
 

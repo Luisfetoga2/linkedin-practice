@@ -1,15 +1,26 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame, IconText, INK } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
+  // The path bends with round corners, like the drawn line in the game.
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
-      <path d="M14 14h20v10H14v10h20" fill="none" stroke="#ff7a2e" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="14" cy="14" r="5" fill="#1f1f1f" />
-      <circle cx="34" cy="34" r="5" fill="#1f1f1f" />
-      <text x="14" y="16.6" textAnchor="middle" fontSize="7" fontWeight="700" fill="#fff" fontFamily="system-ui">1</text>
-      <text x="34" y="36.6" textAnchor="middle" fontSize="7" fontWeight="700" fill="#fff" fontFamily="system-ui">2</text>
-    </svg>
+    <IconFrame size={size}>
+      <path
+        d="M14 14H29A5 5 0 0 1 34 19A5 5 0 0 1 29 24H19A5 5 0 0 0 14 29A5 5 0 0 0 19 34H34"
+        fill="none"
+        stroke="#ff7a2e"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+      <circle cx="14" cy="14" r="5" fill={INK} />
+      <circle cx="34" cy="34" r="5" fill={INK} />
+      <IconText x={14} y={14} size={6.5} fill="#fff">
+        1
+      </IconText>
+      <IconText x={34} y={34} size={6.5} fill="#fff">
+        2
+      </IconText>
+    </IconFrame>
   );
 }
 

@@ -1,19 +1,33 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
-  // A tiny heart picture with clue marks, like a solved nonogram.
+  // A solved 5×5 heart, with one clue mark per run beside each row and above each column.
   const on = ['01010', '11111', '11111', '01110', '00100'];
+  const cell = 4.8;
+  const x0 = 15.5;
+  // Only one clue mark sits above each column, so the block moves up a little to stay centered.
+  const y0 = 14;
+  const runs = (line: string) => line.split(/0+/).filter(Boolean).length;
+  const cols = [0, 1, 2, 3, 4].map((c) => on.map((row) => row[c]).join(''));
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
-      <rect x="8" y="8" width="8" height="2.5" rx="1" fill="#c9c9c9" />
-      <rect x="8" y="12" width="5" height="2.5" rx="1" fill="#c9c9c9" />
+    <IconFrame size={size}>
       {on.flatMap((row, r) =>
-        [...row].map((v, c) =>
-          v === '1' ? <rect key={`${r}${c}`} x={17.5 + c * 5} y={17.5 + r * 5} width="4.4" height="4.4" rx="0.8" fill="#d63384" /> : null,
-        ),
+        [...row].map((v, c) => (
+          <rect key={`${r}${c}`} x={x0 + c * cell + 0.3} y={y0 + r * cell + 0.3} width={cell - 0.6} height={cell - 0.6} rx="0.9" fill={v === '1' ? '#d63384' : '#f1f1f1'} />
+        )),
       )}
-    </svg>
+      {on.flatMap((row, r) =>
+        Array.from({ length: runs(row) }, (_, k) => (
+          <rect key={`r${r}${k}`} x={11.3 - k * 3.4} y={y0 + r * cell + 1.1} width="2.6" height="2.6" rx="0.7" fill="#bdbdbd" />
+        )),
+      )}
+      {cols.flatMap((col, c) =>
+        Array.from({ length: runs(col) }, (_, k) => (
+          <rect key={`c${c}${k}`} x={x0 + c * cell + 1.1} y={y0 - 4.2 - k * 3.4} width="2.6" height="2.6" rx="0.7" fill="#bdbdbd" />
+        )),
+      )}
+    </IconFrame>
   );
 }
 

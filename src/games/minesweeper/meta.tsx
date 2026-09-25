@@ -1,24 +1,33 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame, IconText, INK } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
-  // A corner of a board: open squares with numbers, hidden squares and a flag.
-  const cell = 13;
+  // A consistent corner of a board: the 1s and the 2 touch the two mines in the top row, one flagged.
+  const cell = 31 / 3;
+  const at = (i: number) => 8.5 + i * cell;
+  const mid = (i: number) => at(i) + cell / 2;
   const hidden = ['011', '001', '000'];
+  const numbers: [number, number, string, string][] = [
+    [0, 0, '1', '#1a6ff2'],
+    [1, 0, '1', '#1a6ff2'],
+    [1, 1, '2', '#2e8b3a'],
+  ];
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
+    <IconFrame size={size}>
       {hidden.flatMap((row, r) =>
-        [...row].map((v, c) =>
-          v === '1' ? <rect key={`${r}${c}`} x={5.5 + c * cell + 1} y={5.5 + r * cell + 1} width={cell - 2} height={cell - 2} rx="2" fill="#c9b49d" /> : null,
-        ),
+        [...row].map((v, c) => (
+          <rect key={`${r}${c}`} x={at(c) + 0.5} y={at(r) + 0.5} width={cell - 1} height={cell - 1} rx="2" fill={v === '1' ? '#c9b49d' : '#f4eee6'} />
+        )),
       )}
-      <text x="12" y="16.5" fontSize="9" fontWeight="800" fill="#1a6ff2" fontFamily="system-ui" textAnchor="middle">1</text>
-      <text x="25" y="29.5" fontSize="9" fontWeight="800" fill="#2e8b3a" fontFamily="system-ui" textAnchor="middle">2</text>
-      <text x="12" y="29.5" fontSize="9" fontWeight="800" fill="#1a6ff2" fontFamily="system-ui" textAnchor="middle">1</text>
-      <text x="38" y="42" fontSize="9" fontWeight="800" fill="#d62d20" fontFamily="system-ui" textAnchor="middle">3</text>
-      <path d="M36 9.5v8.5" stroke="#1f1f1f" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M36.6 9.5l5 2.4-5 2.4z" fill="#d62d20" />
-    </svg>
+      {numbers.map(([r, c, n, fill]) => (
+        <IconText key={`${r}${c}`} x={mid(c)} y={mid(r)} size={7.5} fill={fill}>
+          {n}
+        </IconText>
+      ))}
+      <path d={`M${mid(2) - 1.8} ${mid(0) - 3.4}v6.8`} stroke={INK} strokeWidth="1.3" strokeLinecap="round" />
+      <path d={`M${mid(2) - 1.2} ${mid(0) - 3.5}l4.4 2.1-4.4 2.1z`} fill="#d62d20" strokeLinejoin="round" />
+      <path d={`M${mid(2) - 3.3} ${mid(0) + 3.4}h3`} stroke={INK} strokeWidth="1.3" strokeLinecap="round" />
+    </IconFrame>
   );
 }
 

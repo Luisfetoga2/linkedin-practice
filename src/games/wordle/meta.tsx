@@ -1,14 +1,14 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
-      <rect x="8" y="8" width="15" height="15" rx="2" fill="#6aaa64" />
-      <rect x="25" y="8" width="15" height="15" rx="2" fill="#c9b458" />
-      <rect x="8" y="25" width="15" height="15" rx="2" fill="#787c7e" />
-      <rect x="25" y="25" width="15" height="15" rx="2" fill="#6aaa64" />
-    </svg>
+    <IconFrame size={size}>
+      <rect x="8.5" y="8.5" width="14" height="14" rx="2.5" fill="#6aaa64" />
+      <rect x="25.5" y="8.5" width="14" height="14" rx="2.5" fill="#c9b458" />
+      <rect x="8.5" y="25.5" width="14" height="14" rx="2.5" fill="#787c7e" />
+      <rect x="25.5" y="25.5" width="14" height="14" rx="2.5" fill="#6aaa64" />
+    </IconFrame>
   );
 }
 

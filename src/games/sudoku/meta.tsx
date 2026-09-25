@@ -1,16 +1,29 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame, IconText, INK } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
+  // A 4×4 corner of the grid: thin cell lines, thick box lines, one selected square.
+  const cell = 37 / 4;
+  const at = (i: number) => 5.5 + i * cell;
+  const mid = (i: number) => at(i) + cell / 2;
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
-      <path d="M24 5.5v37M5.5 18.5h37M5.5 30.5h37" stroke="#1f1f1f" strokeWidth="2.2" />
-      <path d="M14 5.5v37M34 5.5v37" stroke="#1f1f1f" strokeWidth="1" opacity=".35" />
-      <rect x="25" y="19.5" width="8" height="10" fill="#9ce6c4" />
-      <text x="9.5" y="15.5" fontSize="9" fontWeight="700" fill="#1f1f1f" fontFamily="system-ui">3</text>
-      <text x="28.5" y="27.5" fontSize="9" fontWeight="700" fill="#1f1f1f" fontFamily="system-ui" textAnchor="middle">5</text>
-      <text x="36.5" y="39.5" fontSize="9" fontWeight="700" fill="#1f7a4f" fontFamily="system-ui">1</text>
-    </svg>
+    <IconFrame size={size}>
+      <rect x={at(2)} y={at(1)} width={cell} height={cell} fill="#9ce6c4" />
+      <path d={`M${at(1)} 5.5V42.5M${at(3)} 5.5V42.5M5.5 ${at(1)}H42.5M5.5 ${at(3)}H42.5`} stroke="#bdbdbd" strokeWidth="1" />
+      <path d={`M${at(2)} 5.5V42.5M5.5 ${at(2)}H42.5`} stroke={INK} strokeWidth="2" />
+      <IconText x={mid(0)} y={mid(0)} size={6.5}>
+        3
+      </IconText>
+      <IconText x={mid(2)} y={mid(1)} size={6.5}>
+        5
+      </IconText>
+      <IconText x={mid(1)} y={mid(2)} size={6.5}>
+        2
+      </IconText>
+      <IconText x={mid(3)} y={mid(3)} size={6.5} fill="#1f7a4f">
+        1
+      </IconText>
+    </IconFrame>
   );
 }
 

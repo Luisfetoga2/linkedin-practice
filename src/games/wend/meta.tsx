@@ -1,22 +1,24 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame, IconText, INK } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
+  // Three letter tiles joined by a traced line, and one tile still blank.
   const tile = (x: number, y: number, l: string) => (
     <g key={l}>
-      <rect x={x} y={y} width="17" height="17" rx="3" fill="#ffd54a" stroke="#1f1f1f" strokeWidth="2" />
-      <text x={x + 8.5} y={y + 12.5} textAnchor="middle" fontSize="11" fontWeight="800" fill="#1f1f1f" fontFamily="system-ui">
+      <rect x={x + 0.75} y={y + 0.75} width="12.5" height="12.5" rx="2.5" fill="#ffd54a" stroke={INK} strokeWidth="1.5" />
+      <IconText x={x + 7} y={y + 7} size={8}>
         {l}
-      </text>
+      </IconText>
     </g>
   );
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
-      {tile(6.5, 6.5, 'W')}
-      {tile(24.5, 6.5, 'E')}
-      {tile(24.5, 24.5, 'N')}
-      <rect x="6.5" y="24.5" width="17" height="17" rx="3" fill="#b9b9b9" />
-    </svg>
+    <IconFrame size={size}>
+      <path d="M15.5 15.5h17v17" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      {tile(8.5, 8.5, 'W')}
+      {tile(25.5, 8.5, 'E')}
+      {tile(25.5, 25.5, 'N')}
+      <rect x="8.5" y="25.5" width="14" height="14" rx="2.5" fill="#d9d9d9" />
+    </IconFrame>
   );
 }
 

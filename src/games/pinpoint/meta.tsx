@@ -1,14 +1,14 @@
 import type { GameMeta } from '../../core/types';
+import { FaceCell, IconFrame } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
   const shades = ['#b8d6ff', '#8dbcff', '#5f9dfb', '#3a7ff0', '#1d5fd6'];
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#1f1f1f" />
+    <IconFrame size={size} dark>
       {shades.map((c, i) => (
-        <rect key={c} x="7" y={7 + i * 7} width="34" height="6" rx="1.5" fill={c} />
+        <FaceCell key={c} x={5.5} y={5.5 + i * 7.8} w={37} h={5.8} r={2} fill={c} />
       ))}
-    </svg>
+    </IconFrame>
   );
 }
 

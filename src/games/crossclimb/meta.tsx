@@ -1,13 +1,13 @@
 import type { GameMeta } from '../../core/types';
+import { IconFrame } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#fff" stroke="#1f1f1f" strokeWidth="3" />
+    <IconFrame size={size}>
       {[0, 1, 2, 3].map((i) => (
-        <rect key={i} x="9" y={9 + i * 8} width="30" height="6" rx="2" fill={i === 0 || i === 3 ? '#9fe3ee' : '#1fb6cc'} />
+        <rect key={i} x="8.5" y={8.5 + i * 8.5} width="31" height="5.5" rx="2" fill={i === 0 || i === 3 ? '#9fe3ee' : '#1fb6cc'} />
       ))}
-    </svg>
+    </IconFrame>
   );
 }
 

@@ -1,17 +1,21 @@
 import type { GameMeta } from '../../core/types';
+import { FaceCell, IconFrame, INK } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
-  const c = ['#bba3e2', '#ffc992', '#96beff', '#b3dfa0', '#dfdfdf', '#ff7b60'];
+  const colors = ['#bba3e2', '#ffc992', '#96beff', '#96beff', '#b3dfa0', '#dfdfdf', '#dfdfdf', '#ff7b60', '#bba3e2'];
+  const at = (i: number) => 5.5 + i * 13;
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#1f1f1f" />
-      {[0, 1, 2].flatMap((r) =>
-        [0, 1, 2].map((q) => (
-          <rect key={`${r}${q}`} x={7 + q * 11.7} y={7 + r * 11.7} width="10.6" height="10.6" rx="1.5" fill={c[(r * 2 + q) % c.length]} />
-        )),
-      )}
-      <path d="M18.5 28.5l-1.5-8 3.8 3 3.2-5 3.2 5 3.8-3-1.5 8z" fill="#1f1f1f" />
-    </svg>
+    <IconFrame size={size} dark>
+      {colors.map((fill, i) => (
+        <FaceCell key={i} x={at(i % 3)} y={at(Math.floor(i / 3))} w={11} h={11} fill={fill} />
+      ))}
+      {/* A crown on the middle square. */}
+      <path d="M20.3 26.4L19.5 21.6L22.3 23.7L24 20.4L25.7 23.7L28.5 21.6L27.7 26.4Z" fill={INK} strokeLinejoin="round" stroke={INK} strokeWidth="0.6" />
+      <circle cx="19.5" cy="21.3" r="0.95" fill={INK} />
+      <circle cx="24" cy="20" r="0.95" fill={INK} />
+      <circle cx="28.5" cy="21.3" r="0.95" fill={INK} />
+      <rect x="20.3" y="27.1" width="7.4" height="1.5" rx="0.6" fill={INK} />
+    </IconFrame>
   );
 }
 

@@ -1,26 +1,21 @@
 import type { GameMeta } from '../../core/types';
+import { FaceCell, IconFrame, INK, FONT } from '../../core/components/GameIcon';
 
 function Icon({ size = 48 }: { size?: number }) {
-  // A tiny crossword: 3×3 with one black square and a numbered corner.
-  const cells = [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-    [0, 2],
-    [2, 1],
-    [1, 2],
-  ];
+  // A tiny crossword: 3×3 with one black square, the first across answer highlighted.
+  const at = (i: number) => 5.5 + i * 13;
+  const cells = [0, 1, 2, 3, 4, 5, 6, 7];
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect x="4" y="4" width="40" height="40" rx="7" fill="#1f1f1f" />
-      {cells.map(([c, r]) => (
-        <rect key={`${c}${r}`} x={7 + c * 11.7} y={7 + r * 11.7} width="10.6" height="10.6" rx="1.4" fill={r === 0 ? '#9fb4ff' : '#fff'} />
-      ))}
-      <rect x={7 + 2 * 11.7} y={7 + 2 * 11.7} width="10.6" height="10.6" rx="1.4" fill="#1f1f1f" />
-      <text x="9" y="12.6" fontSize="4.6" fontWeight="700" fill="#1f1f1f" fontFamily="system-ui">1</text>
-    </svg>
+    <IconFrame size={size} dark>
+      {cells.map((i) => {
+        const r = Math.floor(i / 3);
+        const fill = i === 0 ? '#7e9bff' : r === 0 ? '#bccaff' : '#fff';
+        return <FaceCell key={i} x={at(i % 3)} y={at(r)} w={11} h={11} fill={fill} />;
+      })}
+      <text x="7.6" y="11.4" fontSize="4.4" fontWeight="800" fill={INK} fontFamily={FONT}>
+        1
+      </text>
+    </IconFrame>
   );
 }
 
