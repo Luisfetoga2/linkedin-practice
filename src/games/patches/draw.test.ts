@@ -76,9 +76,16 @@ describe('canStillFit / fitProblem', () => {
 
   it('lets incomplete patches that can still grow pass', () => {
     expect(fitProblem(R(0, 0, 0, 1), clue(0, 0, 6), N)).toBeNull();
-    expect(fitProblem(R(0, 0, 1, 1), clue(0, 0, 6, 'tall'), N)).toBeNull(); // → 3×2
-    expect(fitProblem(R(0, 0, 0, 1), clue(0, 0, null, 'square'), N)).toBeNull(); // → 2×2
+    expect(fitProblem(R(0, 0, 1, 0), clue(0, 0, 6, 'tall'), N)).toBeNull(); // tall 2×1 → 3×2
+    expect(fitProblem(R(0, 0, 1, 1), clue(0, 0, null, 'square'), N)).toBeNull(); // → 3×3
     expect(fitProblem(R(0, 0, 5, 5), clue(0, 0), N)).toBeNull(); // joker
+  });
+
+  it('checks a shape clue on the patch as drawn, even if a bigger one would fit', () => {
+    expect(fitProblem(R(0, 0, 0, 1), clue(0, 0, null, 'tall'), N)).toBe('tall'); // wide 1×2 for a tall clue
+    expect(fitProblem(R(0, 0, 1, 1), clue(0, 0, 6, 'tall'), N)).toBe('tall'); // square 2×2
+    expect(fitProblem(R(0, 0, 0, 1), clue(0, 0, null, 'square'), N)).toBe('square');
+    expect(fitProblem(R(0, 0, 1, 0), clue(0, 0, null, 'wide'), N)).toBe('wide');
   });
 
   it('flags shapes no bigger rectangle can fix', () => {

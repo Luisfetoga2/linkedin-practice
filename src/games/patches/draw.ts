@@ -1,4 +1,4 @@
-import { fitsClue, rectArea, rectContains, rectsOverlap, type Clue, type Rect } from './generator';
+import { fitsClue, rectArea, rectContains, rectsOverlap, shapeOf, type Clue, type Rect } from './generator';
 
 export type Patches = (Rect | null)[];
 
@@ -119,6 +119,9 @@ export function canStillFit(rect: Rect, clue: Pick<Clue, 'size' | 'shape'>, n: n
 export type FitProblem = 'area' | 'noFit' | 'square' | 'wide' | 'tall';
 
 export function fitProblem(rect: Rect, clue: Pick<Clue, 'size' | 'shape'>, n: number): FitProblem | null {
+  // As in LinkedIn, a shape clue is checked on what you drew, not on what it could grow into:
+  // a wide patch for a "taller than wide" clue is wrong even if a bigger one would fit.
+  if (clue.shape !== 'any' && shapeOf(rect) !== clue.shape) return clue.shape;
   if (canStillFit(rect, clue, n)) return null;
   if (clue.size != null && rectArea(rect) > clue.size) return 'area';
   if (clue.shape !== 'any') return clue.shape;

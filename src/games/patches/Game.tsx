@@ -323,11 +323,11 @@ export default function Game({ seed, lang, options, paused, onReady, onHint, onC
     dismissOops();
     const cur = patchesRef.current;
     onHint();
-    const wrong = cur.findIndex((p, i) => p && !sameRect(p, solution[i]));
-    if (wrong >= 0) {
-      setFlash(wrong);
-      later(() => setFlash((f) => (f === wrong ? null : f)), 2400);
-      setHint({ text: t.wrongPatch });
+    // Any patch that isn't in the solution goes, all in one hint (undo brings them back).
+    const wrong = cur.filter((p, i) => p && !sameRect(p, solution[i])).length;
+    if (wrong > 0) {
+      commit(cur.map((p, i) => (p && !sameRect(p, solution[i]) ? null : p)));
+      setHint({ text: t.wrongPatches(wrong) });
       return;
     }
     const res = logicSolve(n, clues, cur);

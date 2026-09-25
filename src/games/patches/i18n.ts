@@ -11,7 +11,7 @@ export const STR = defineStrings(
       `Patches board, ${n} by ${n}. ${placed} of ${total} patches placed.`,
     needsOneClue: 'A patch needs exactly one clue',
     onlyOneClue: 'A patch can only hold one clue',
-    wrongPatch: 'This patch isn’t right. Try removing it and drawing it again.',
+    wrongPatches: (n: number) => (n === 1 ? 'A wrong patch was removed.' : `${n} wrong patches were removed.`),
     oops: {
       area: (n: number) => `Oops! This shaded region can only contain ${n} cells.`,
       noFit: (n: number) => `Oops! This shaded region can’t grow into a rectangle of ${n} cells.`,
@@ -36,7 +36,7 @@ export const STR = defineStrings(
       `Tablero de Patches, ${n} por ${n}. ${placed} de ${total} parches colocados.`,
     needsOneClue: 'Un parche necesita exactamente una pista',
     onlyOneClue: 'Un parche solo puede tener una pista',
-    wrongPatch: 'Este parche no es correcto. Intenta quitarlo y dibujarlo de nuevo.',
+    wrongPatches: (n: number) => (n === 1 ? 'Se quitó un parche incorrecto.' : `Se quitaron ${n} parches incorrectos.`),
     oops: {
       area: (n: number) => `¡Ups! Esta región sombreada solo puede tener ${n} casillas.`,
       noFit: (n: number) => `¡Ups! Esta región sombreada no puede formar un rectángulo de ${n} casillas.`,
