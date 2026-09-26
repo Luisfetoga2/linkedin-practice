@@ -144,20 +144,35 @@ export function GameShell({ entry }: { entry: GameEntry }) {
   }, [phase, touched, modal, markTouched]);
 
   /** In-app links out of the game (back arrow, stats): ask first, and never leave the guard behind. */
-  const leaveTo = (e: React.MouseEvent<HTMLAnchorElement>, target: string) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-    if (guarded) {
+  // Every in-app link inside the game (back arrow, stats icon, the results sheet's Stats button,
+  // "link to this puzzle"...) goes through here. A plain hash change would pop the guard entry and
+  // read as "back", bouncing you to the game; instead ask first mid-round, and otherwise pop the
+  // guard ourselves and then follow the link.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
+      if (!a || a.target === '_blank') return;
+      const target = a.getAttribute('href')!;
+      if (!guardPushed.current) return; // no guard entry: the link works as is
       e.preventDefault();
-      quitVia.current = target;
-      pendingRestart.current = null;
-      setQuitKind('leave');
-      setModal('quit');
-    } else if (guardPushed.current) {
-      e.preventDefault();
-      pendingTarget.current = target;
-      window.history.back();
-    }
-  };
+      if (target.split('?')[0] === href(meta.id)) {
+        // Same game (e.g. "link to this puzzle"): update the address, keep playing.
+        window.history.replaceState(window.history.state, '', target);
+        gameUrl.current = window.location.href;
+      } else if (guardedRef.current) {
+        quitVia.current = target;
+        pendingRestart.current = null;
+        setQuitKind('leave');
+        setModal('quit');
+      } else {
+        pendingTarget.current = target;
+        window.history.back();
+      }
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [meta.id]);
 
   /** Starting a new puzzle mid-round throws the current one away too, so ask first. */
   const confirmNew = (run: () => void) => {
@@ -337,7 +352,7 @@ export function GameShell({ entry }: { entry: GameEntry }) {
     <div className="lp-shell" style={style}>
       <header className="lp-topbar">
         <div className="lp-topbar-inner">
-          <a className="icon-btn" href={href('')} onClick={(e) => leaveTo(e, href(''))} aria-label={t.backToGames}>
+          <a className="icon-btn" href={href('')} aria-label={t.backToGames}>
             <ArrowLeft size={22} />
           </a>
           <div className="lp-topbar-title">
@@ -353,7 +368,6 @@ export function GameShell({ entry }: { entry: GameEntry }) {
             <a
               className="icon-btn"
               href={href(`stats/${meta.id}`)}
-              onClick={(e) => leaveTo(e, href(`stats/${meta.id}`))}
               aria-label={t.statistics}
               title={t.statistics}
             >
