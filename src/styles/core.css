@@ -183,6 +183,8 @@
   padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
 }
 .lp-play-inner {
+  /* Game layers (z-index) stay inside the play area and can't cover dialogs. */
+  isolation: isolate;
   width: 100%;
   max-width: calc(var(--board-max) + 32px);
   display: flex;

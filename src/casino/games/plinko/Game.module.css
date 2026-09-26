@@ -122,6 +122,8 @@
 }
 
 .buckets {
+  /* Landings keep raising a bucket's z-index; keep that stacking inside the row. */
+  isolation: isolate;
   position: absolute;
   display: grid;
   gap: 0.35cqw;

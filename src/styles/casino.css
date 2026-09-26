@@ -1,5 +1,7 @@
 /* ---------- Casino (play money) shared UI ---------- */
 .cs-play {
+  /* Whatever a game stacks inside (z-index), it never rises above the shell's dialogs. */
+  isolation: isolate;
   --cs-up: var(--success);
   --cs-down: var(--error-text);
 }
