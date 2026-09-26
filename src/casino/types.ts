@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { Lang, Localized } from '../lib/i18n';
 
-export type CasinoId = 'blackjack' | 'gems' | 'road';
+export type CasinoId = 'blackjack' | 'gems' | 'road' | 'rocket' | 'plinko';
 
 export interface CasinoMeta {
   id: CasinoId;

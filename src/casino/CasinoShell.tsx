@@ -73,17 +73,21 @@ export function CasinoShell({ entry }: { entry: CasinoEntry }) {
   const begin = useCallback(
     (stake: number, note?: string): Round => {
       const id = openRound(meta.id, stake, note);
-      liveStake.current = stake;
+      // Several rounds can be live at once (Plinko balls), so this is the total still on the table.
+      liveStake.current += stake;
+      let staked = stake;
       let done = false;
       return {
         raise(extra) {
           if (done) return;
+          staked += extra;
           liveStake.current += extra;
           raiseRound(id, extra);
         },
         settle(payout, n) {
           if (done) return;
           done = true;
+          liveStake.current = Math.max(0, liveStake.current - staked);
           settleRound(id, payout, n);
         },
       };

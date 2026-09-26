@@ -1,7 +1,7 @@
 # Games Practice
 
 Endless practice rounds of LinkedIn-style daily puzzle games — **Queens, Tango, Zip, Mini Sudoku, Patches, Wend, Crossclimb, Pinpoint** — plus **Wordle**, **Nonogram**, a **Mini Crossword** and **Minesweeper**.
-There's also a play-money **Casino** (Blackjack, Gems and Crossy Road) that tracks your net winnings, win rate and biggest wins and losses. No real money is involved.
+There's also a play-money **Casino** (Blackjack, Gems, Crossy Road, Rocket and Plinko) that tracks your net winnings, win rate and biggest wins and losses. No real money is involved.
 Every round is freshly generated, with the same hints the originals offer, a timer, and local streaks and statistics. No login; everything is stored in your browser.
 
 Live site: https://luisfetoga2.github.io/linkedin-practice/
